@@ -17,7 +17,6 @@ if (!$connection) {
     die("Database connection failed: " . mysqli_connect_error());
 }
 // --- End Database Connection ---
-
 // --- Process Sign Up Form Submission ---
 if (isset($_POST['signup'])) {
     // Sanitize and get form data
@@ -381,6 +380,29 @@ $profilePictureUrl = $defaultProfilePicture;
           .signup-container p a:hover {
                text-decoration: underline;
           }
+
+        
+        .d-flex {
+            display: flex;
+            align-items: center;
+        }
+
+        .d-flex .form-control {
+            flex-grow: 1;
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .d-flex .btn {
+            text-align: center;
+            height: 37px;
+            margin-left: 5px;
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            font-size: 0.8rem;
+            line-height: 1;
+            padding: 10px 12px;
+        }
     </style>
 </head>
 <body>
@@ -453,11 +475,16 @@ $profilePictureUrl = $defaultProfilePicture;
             <form method="post">
                 <div class="form-group">
                     <label for="username">Username:</label>
-                    <input type="text" class="form-control" id="username" name="username" required value="<?php echo $username_value; ?>">
+                    <input type="text" class="form-control" id="username" name="username" placeholder="JohnDoe" required value="<?php echo $username_value; ?>">
                 </div>
                 <div class="form-group">
-                    <label for="email">Gmail Address:</label>
-                    <input type="email" class="form-control" id="email" name="email" required value="<?php echo $email_value; ?>">
+                    <label for="email">Email:</label>
+                    <div class="d-flex align-items-center">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="johndoe@gmail.com" required value="<?php echo $email_value; ?>">
+                        <button class="btn btn-primary" type="button" name="getcodebutton" id="getcodebutton">Send</button>
+                    </div>
+                    <br>
+                    <input type="text" class="form-control" id="codeinput" name="codeinput>" placeholder="Enter verification code" required>
                 </div>
                 <div class="form-group">
                     <label for="password">Password:</label>
@@ -487,14 +514,92 @@ $profilePictureUrl = $defaultProfilePicture;
      <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 
     <script>
-        // Simple JavaScript to set the hidden field value when the checkbox is checked
-        document.getElementById('robot_checkbox').addEventListener('change', function() {
-            if (this.checked) {
-                document.getElementById('robot_check_hidden').value = 'human';
-            } else {
-                document.getElementById('robot_check_hidden').value = ''; // Reset if unchecked
-            }
-        });
+        // JS event listeners.
+        document.addEventListener('DOMContentLoaded', function() { // if document is loaded..
+            const getCodeButton = document.getElementById('getcodebutton'); // get the getcodebutton element.
+            const emailInput = document.getElementById('email'); // get the email input element.
+            const signupForm = document.querySelector('form'); // returns the first element (form) found within this document, which in this case, is the sign up submit form.
+            const codeInput = document.getElementById('codeinput'); // get the code input element.
+
+            let receivedCode = null;
+            let timer;
+            const initialTime = 30;
+
+            getCodeButton.addEventListener('click', function(event){
+                event.preventDefault(); // prevent this code from running when page loads.
+                const email = emailInput.value;
+                if(email.trim() === ''){ // if email is empty, stop.
+                    alert('Please enter your email address first.')
+                    return;
+                }
+
+                getCodeButton.disabled = true; // disable button
+                let timeLeft = initialTime;
+                getCodeButton.textContent = `Send (${timeLeft}s)`; // change getcodebutton button text.
+
+                // getcodebutton text change & re-enabling.
+                timer = setInterval(function() {
+                    timeLeft--;
+                    if(timeLeft>0) {
+                        getCodeButton.textContent = `Send (${timeLeft}s)`;
+                    } else {
+                        clearInterval(timer);
+                        getCodeButton.disabled = false;
+                        getCodeButton.textContent = 'Send';
+                    }
+                }, 1000);
+
+                // fetch request to send_code.php.
+                fetch('send_code.php', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: `email=${encodeURIComponent(email)}` // attach email as the body to be sent to the php.
+                })
+                .then(response => response.json()) // get the json response and store it in response variable.
+                .then(data => { // data now holds the json object from before, we can now use the received data.
+                    if(data.success){ // refer to the success message from send_code.php.
+                        receivedCode = data.code; // set receivedCode as the code message from send_code.php
+                        alert(data.message + ' (Code for debugging: ' + receivedCode + ')'); // debugging purposes only, ignore.
+                    } else {
+                        // error handling.
+                        alert('Error: ' + data.message);
+                        clearInterval(timer);
+                        getCodeButton.disabled = false;
+                        getCodeButton.textContent = 'Send';
+                    }
+                })
+                .catch(error => {
+                    // catch any errors
+                    console.error('Network Error:', error);
+                    alert('An error occurred. Please try again.');
+                    clearInterval(timer);
+                    getCodeButton.disabled = false;
+                    getCodeButton.textContent = 'Send';
+                })
+            })
+
+            // Simple JavaScript to set the hidden field value when the checkbox is checked
+            document.getElementById('robot_checkbox').addEventListener('change', function() {
+                if (this.checked) {
+                    document.getElementById('robot_check_hidden').value = 'human';
+                } else {
+                    document.getElementById('robot_check_hidden').value = ''; // Reset if unchecked
+                }
+            });
+
+            // hijacks the form before calling the php script.
+            signupForm.addEventListener('submit', function(event){
+                const enteredCode = codeInput.value;
+
+                // checks if code is empty or invalid.
+                if(receivedCode === null || enteredCode != String(receivedCode)){
+                    event.preventDefault();
+                    codeInput.value = '';
+                    alert('The verification code is incorrect. Please try again.');
+                    return;
+                }
+            });
+        })
     </script>
 </body>
 </html>
