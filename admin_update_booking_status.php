@@ -1,11 +1,11 @@
 <?php
 session_start(); // Start the session
 
-// --- Admin Authentication Check ---
-// Ensures only logged-in admins can access this script
-if (!isset($_SESSION['book_id']) || $_SESSION['username'] !== 'Admin') {
-    // Redirect to login page or show an access denied message
-    header('Location: login_page.php'); // Redirect to your login page
+// --- Staff Authentication Check ---
+// Ensures only logged-in staff can access this script
+if (!isset($_SESSION['book_id']) || !isset($_SESSION['book_user_roles']) || $_SESSION['book_user_roles'] !== 'Staff') {
+    // Redirect to login page if not a staff member
+    header('Location: login_page.php');
     exit();
 }
 
@@ -36,7 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Check database connection
     if (!$connection) {
         // Log the specific connection error
-        error_log("Database connection failed in admin status update: " . mysqli_connect_error());
+        error_log("Database connection failed in staff status update: " . mysqli_connect_error());
         $errors[] = "An error occurred connecting to the database.";
     }
 
@@ -61,7 +61,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             } else {
                 // Update failed
                 // Log the specific MySQL error
-                error_log("Database update error in admin status update: " . mysqli_error($connection));
+                error_log("Database update error in staff status update: " . mysqli_error($connection));
                 $errors[] = "An error occurred updating the booking status.";
             }
             // Close the prepared statement
@@ -70,7 +70,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         } else {
             // Prepared statement failed
             // Log the specific MySQL error
-            error_log("Database prepare error for admin status update: " . mysqli_error($connection));
+            error_log("Database prepare error for staff status update: " . mysqli_error($connection));
             $errors[] = "An internal error occurred preparing to update status.";
         }
     }
@@ -87,14 +87,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         mysqli_close($connection);
     }
 
-    // Redirect back to the admin booking list page to show the updated list and messages
-    header('Location: admin_booking_list.php');
+    // Redirect back to the staff booking status page to show the updated list and messages
+    header('Location: staff_booking_status.php');
     exit(); // Stop further script execution after redirection
 
 } else {
     // If the script is accessed directly via GET request (not form submission)
-    // Redirect to the admin booking list page
-    header('Location: admin_booking_list.php');
+    // Redirect to the staff booking status page
+    header('Location: staff_booking_status.php');
     exit(); // Stop further script execution
 }
 ?>

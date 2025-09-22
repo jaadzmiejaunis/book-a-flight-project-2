@@ -1,65 +1,86 @@
 <?php
 session_start(); // Start the session - MUST be the very first thing in the file
 
-// --- Admin Authentication Check ---
-if (!isset($_SESSION['book_id']) || $_SESSION['username'] !== 'Staff') {
-    header('Location: login_page.php'); // Redirect to your login page
-    exit();
-}
-
-// Admin user is logged in, no need to fetch profile data for header display
-$loggedIn = true; // We know they are logged in if they passed the check
-
-$defaultProfilePicture = 'path/to/default-admin-profile-picture.png'; // <<<--- UPDATE THIS PATH
-
-// $profilePictureUrl is also not needed for display anymore, but keeping the variable
-$profilePictureUrl = isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
-
 // --- Database Connection ---
 include 'connection.php';
 
 if (!$connection) {
-    error_log("Database connection failed on admin booking list page: " . mysqli_connect_error());
+    error_log("Database connection failed on staff booking status page: " . mysqli_connect_error());
     die("An error occurred connecting to the database.");
 }
 // --- End Database Connection ---
 
+// --- Staff Authentication and Data Retrieval ---
+$loggedIn = isset($_SESSION['book_id']);
+$username = 'Staff Member';
+$profilePictureUrl = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
+
+// Check if a user is logged in and is a staff member
+if ($loggedIn) {
+    $user_id = $_SESSION['book_id'];
+
+    // Fetch user details from the database using a prepared statement for security
+    $sql = "SELECT book_username, book_user_roles, book_profile FROM BookUser WHERE book_id = ?";
+    $stmt = mysqli_prepare($connection, $sql);
+    mysqli_stmt_bind_param($stmt, "i", $user_id);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if ($user = mysqli_fetch_assoc($result)) {
+        // Now check if the user is actually a Staff member
+        if ($user['book_user_roles'] !== 'Staff') {
+            header('Location: login_page.php');
+            exit();
+        }
+        $username = htmlspecialchars($user['book_username']);
+        if (!empty($user['book_profile'])) {
+            $profilePictureUrl = htmlspecialchars($user['book_profile']);
+        }
+    } else {
+        // User not found, redirect to login
+        header('Location: login_page.php');
+        exit();
+    }
+    mysqli_stmt_close($stmt);
+} else {
+    // Not logged in, redirect to login
+    header('Location: login_page.php');
+    exit();
+}
 
 // --- Fetch All Booking History ---
-$booking_history = []; // Initialize an empty array to store booking history
+$booking_history = [];
 $error_message = '';
 
-// Define your SQL query to select all booking information
-// Including user_id and book_username from BookHistory
-$sql = "SELECT history_id, user_id, book_username, book_origin_state, book_origin_country, book_destination_state, book_destination_country, book_departure, book_return, book_class, book_airlines, book_price, booking_date, booking_status FROM BookHistory ORDER BY booking_date DESC"; // Order by booking date (most recent first)
+// Define your SQL query to select all booking information, including the formatted history_id
+$sql_history = "SELECT CONCAT('FL', LPAD(history_id, 2, '0')) AS history_id_formatted, history_id, user_id, book_username, book_origin_state, book_origin_country, book_destination_state, book_destination_country, book_departure, book_return, book_class, book_airlines, book_price, booking_date, booking_status FROM BookHistory ORDER BY booking_date DESC";
 
-// Execute the query
-$result = mysqli_query($connection, $sql);
+// Use a prepared statement for security
+if ($stmt_history = mysqli_prepare($connection, $sql_history)) {
+    mysqli_stmt_execute($stmt_history);
+    $result_history = mysqli_stmt_get_result($stmt_history);
 
-// Check if the query was successful
-if ($result) {
-    // Fetch rows from the result set
-    while ($row = mysqli_fetch_assoc($result)) {
-        $booking_history[] = $row; // Add each booking row to the array
+    if ($result_history) {
+        while ($row = mysqli_fetch_assoc($result_history)) {
+            $booking_history[] = $row;
+        }
+        mysqli_free_result($result_history);
+    } else {
+        error_log("Database query error on staff booking list: " . mysqli_error($connection));
+        $error_message = "An error occurred fetching booking history. Please try again.";
     }
-
-    // Free the result set
-    mysqli_free_result($result);
+    mysqli_stmt_close($stmt_history);
 } else {
-    // Query failed
-    error_log("Database query error on admin booking list: " . mysqli_error($connection)); // Log the specific MySQL error
-    $error_message = "An error occurred fetching booking history. Please try again.";
+    $error_message = "Error preparing query: " . mysqli_error($connection);
 }
 
 // Close database connection
 mysqli_close($connection);
 
 // --- Handle Success or Error Messages from Processing Scripts ---
-// Check if there are messages stored in the session (e.g., from update/delete scripts)
 $process_message = $_SESSION['process_message'] ?? '';
-$message_type = $_SESSION['message_type'] ?? ''; // 'success' or 'danger'
+$message_type = $_SESSION['message_type'] ?? '';
 
-// Clear the session messages after retrieving them
 unset($_SESSION['process_message']);
 unset($_SESSION['message_type']);
 
@@ -72,17 +93,17 @@ unset($_SESSION['message_type']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Booking Status - SierraFlight</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body {
             background-color: #1e1e2d;
             color: #e0e0e0;
             font-family: sans-serif;
-             margin: 0;
-             padding: 0;
-             display: flex;
-             flex-direction: column;
-             min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         .top-gradient-bar {
@@ -101,9 +122,9 @@ unset($_SESSION['message_type']);
             justify-content: space-between;
             align-items: center;
             width: 100%;
-             max-width: 1140px;
-             margin: 0 auto;
-             flex-wrap: wrap;
+            max-width: 1140px;
+            margin: 0 auto;
+            flex-wrap: wrap;
         }
 
         .top-gradient-bar .site-title {
@@ -114,32 +135,42 @@ unset($_SESSION['message_type']);
             margin-right: auto;
             white-space: nowrap;
         }
-         .top-gradient-bar .site-title:hover {
-              text-decoration: underline;
-         }
+        .top-gradient-bar .site-title:hover {
+            text-decoration: underline;
+        }
 
         .top-gradient-bar .user-info {
             display: flex;
             align-items: center;
             color: white;
-             flex-shrink: 0;
-             margin-left: auto;
-             white-space: nowrap;
+            flex-shrink: 0;
+            margin-left: auto;
+            white-space: nowrap;
         }
 
-         .top-gradient-bar .btn-danger {
-             background-color: #dc3545;
-             border-color: #dc3545;
-             padding: .3rem .6rem;
-             font-size: .95rem;
-             line-height: 1.5;
-             border-radius: .2rem;
-             margin-left: 10px;
-         }
-         .top-gradient-bar .btn-danger:hover {
-             background-color: #c82333;
-             border-color: #bd2130;
-         }
+        .top-gradient-bar .profile-picture-nav, .top-gradient-bar .profile-icon-nav {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-left: 8px;
+            vertical-align: middle;
+            object-fit: cover;
+            border: 1px solid white;
+        }
+
+        .top-gradient-bar .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            padding: .3rem .6rem;
+            font-size: .95rem;
+            line-height: 1.5;
+            border-radius: .2rem;
+            margin-left: 10px;
+        }
+        .top-gradient-bar .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
 
         .navbar {
             background-color: #212529;
@@ -151,12 +182,12 @@ unset($_SESSION['message_type']);
         }
 
         .navbar > .container {
-             display: flex;
-             align-items: center;
-             width: 100%;
-             max-width: 1140px;
-             margin: 0 auto;
-             padding: 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0;
         }
 
         .navbar-brand,
@@ -164,31 +195,31 @@ unset($_SESSION['message_type']);
             display: none;
         }
         @media (max-width: 991.98px) {
-             .navbar-toggler {
-                 display: block;
-                 padding: .25rem .75rem;
-                 font-size: 1.25rem;
-                 line-height: 1;
-                 background-color: transparent;
-                 border: 1px solid rgba(255, 255, 255, .1);
-                 border-radius: .25rem;
-             }
-              .navbar-collapse {
-                  background-color: #212529;
-                  padding: 10px;
-              }
-               .navbar > .container {
-                   justify-content: space-between;
-              }
-               .navbar-collapse {
-                    flex-grow: 1;
-               }
+            .navbar-toggler {
+                display: block;
+                padding: .25rem .75rem;
+                font-size: 1.25rem;
+                line-height: 1;
+                background-color: transparent;
+                border: 1px solid rgba(255, 255, 255, .1);
+                border-radius: .25rem;
+            }
+            .navbar-collapse {
+                background-color: #212529;
+                padding: 10px;
+            }
+            .navbar > .container {
+                justify-content: space-between;
+            }
+            .navbar-collapse {
+                flex-grow: 1;
+            }
         }
 
         .navbar-nav .nav-link {
-             padding: 8px 15px;
-             color: white !important;
-             transition: background-color 0.3s ease, text-decoration 0.3s ease;
+            padding: 8px 15px;
+            color: white !important;
+            transition: background-color 0.3s ease, text-decoration 0.3s ease;
         }
 
         .navbar-nav .nav-link:hover {
@@ -198,12 +229,12 @@ unset($_SESSION['message_type']);
         }
 
         .navbar-nav .nav-link:active {
-             background-color: rgba(255, 255, 255, 0.2);
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
         .page-content {
-             padding: 20px;
-             flex-grow: 1;
+            padding: 20px;
+            flex-grow: 1;
         }
 
         .admin-container {
@@ -213,7 +244,7 @@ unset($_SESSION['message_type']);
             border-radius: 8px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             padding: 30px;
-             color: #e0e0e0;
+            color: #e0e0e0;
         }
 
         .admin-header {
@@ -224,8 +255,8 @@ unset($_SESSION['message_type']);
             text-align: center;
             font-size: 1.8rem;
             font-weight: bold;
-             border-top-left-radius: 8px;
-             border-top-right-radius: 8px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
         .booking-table {
@@ -253,23 +284,23 @@ unset($_SESSION['message_type']);
             margin-right: 5px;
             font-size: 0.9rem;
         }
-         .booking-table .btn-secondary {
-             background-color: #6c757d;
-             border-color: #6c757d;
-             color: white;
-         }
-         .booking-table .btn-secondary:hover {
-             background-color: #5a6268;
-             border-color: #545b62;
-         }
-         .booking-table .btn-danger {
-             background-color: #dc3545;
-             border-color: #dc3545;
-         }
-         .booking-table .btn-danger:hover {
-             background-color: #c82333;
-             border-color: #bd2130;
-         }
+        .booking-table .btn-secondary {
+            background-color: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        .booking-table .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #545b62;
+        }
+        .booking-table .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .booking-table .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
 
         .booking-status-select {
             background-color: #3a3e52;
@@ -291,9 +322,9 @@ unset($_SESSION['message_type']);
             outline: none;
         }
 
-         .status-Pending { color: #ffc107; }
-         .status-Booked { color: #28a745; }
-         .status-Cancelled { color: #dc3545; }
+        .status-Pending { color: #ffc107; }
+        .status-Booked { color: #28a745; }
+        .status-Cancelled { color: #dc3545; }
 
         .no-bookings {
             text-align: center;
@@ -307,62 +338,65 @@ unset($_SESSION['message_type']);
             border-color: #c3e6cb;
         }
         .alert-danger {
-             color: #721c24;
+            color: #721c24;
             background-color: #f8d7da;
             border-color: #f5c6cb;
         }
-         .alert-warning {
-             color: #856404;
-             background-color: #fff3cd;
-             border-color: #ffeeba;
-         }
-          .alert-info {
-              color: #0c5460;
-              background-color: #d1ecf1;
-              border-color: #bee5eb;
-          }
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeeba;
+        }
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
     </style>
 </head>
 <body>
 
     <div class="top-gradient-bar">
-        <div class="container"> <a href="homepage_staff.php" class="site-title">SierraFlight (Staff)</a> <div class="user-info">
+        <div class="container">
+            <a href="homepage.php" class="site-title">SierraFlight (Staff)</a>
+            <div class="user-info">
                 <?php if ($loggedIn): ?>
-                     <a href="profile_page.php">
-                         Profile
-                         <?php if ($profilePictureUrl === $defaultProfilePicture): ?>
-                              <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                         <?php else: ?>
-                              <img src="<?php echo htmlspecialchars($profilePictureUrl); ?>" alt="Profile Picture" class="profile-picture-nav">
-                         <?php endif; ?>
-                     </a>
-                     <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
+                    <span>Welcome, <?php echo $username; ?>!</span>
+                    <a href="profile_page.php">
+                        <?php if (empty($profilePictureUrl) || strpos($profilePictureUrl, 'default') !== false): ?>
+                            <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
+                        <?php else: ?>
+                            <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
+                        <?php endif; ?>
+                    </a>
+                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container"> <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
-                     <li class="nav-item">
-                         <a class="nav-link" href="staff_homepage.php">Home</a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="staff_about.php">About</a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
-                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="homepage.php">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="about.php">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -371,7 +405,7 @@ unset($_SESSION['message_type']);
     <div class="container page-content">
         <div class="admin-container">
             <div class="admin-header">
-                Customer'S Booking Status
+                Customer's Booking Status
             </div>
 
             <?php if (isset($process_message) && !empty($process_message)): ?>
@@ -385,69 +419,68 @@ unset($_SESSION['message_type']);
                     <?php echo $error_message; ?>
                 </div>
             <?php elseif (!empty($booking_history)): ?>
-                <table class="table booking-table">
-                    <thead>
-                        <tr>
-                            <th>Booking ID</th>
-                            <th>User ID</th>
-                            <th>Username</th>
-                            <th>Origin</th>
-                            <th>Destination</th>
-                            <th>Departure</th>
-                            <th>Return</th>
-                            <th>Class</th>
-                            <th>Airline</th>
-                            <th>Price (RM)</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($booking_history as $booking): ?>
+                <div class="table-responsive">
+                    <table class="table booking-table">
+                        <thead>
                             <tr>
-                                <td><?php echo htmlspecialchars($booking['history_id']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['user_id']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_username']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_origin_state'] . ', ' . $booking['book_origin_country']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_destination_state'] . ', ' . $booking['book_destination_country']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_departure']); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_return']); ?></td>
-                                <td><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['book_class']))); ?></td>
-                                <td><?php echo htmlspecialchars($booking['book_airlines']); ?></td>
-                                <td><?php echo htmlspecialchars(number_format($booking['book_price'], 2)); ?></td>
-                                <td>
-                                     <span class="status-<?php echo htmlspecialchars($booking['booking_status']); ?>">
-                                         <?php echo htmlspecialchars($booking['booking_status']); ?>
-                                     </span>
-                                </td>
-                                <td>
-                                     <form action="admin_update_booking_status.php" method="post" style="display:inline-block;">
-                                         <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
-                                         <select name="new_status" class="booking-status-select">
-                                             <option value="Pending" <?php echo ($booking['booking_status'] === 'Pending') ? 'selected' : ''; ?>>Pending</option>
-                                             <option value="Booked" <?php echo ($booking['booking_status'] === 'Booked') ? 'selected' : ''; ?>>Booked</option>
-                                             <option value="Cancelled" <?php echo ($booking['booking_status'] === 'Cancelled') ? 'selected' : ''; ?>>Cancelled</option>
-                                         </select>
-                                         <button type="submit" class="btn btn-secondary btn-sm">Update</button>
-                                     </form>
-                                      <form action="admin_delete_booking.php" method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this booking?');">
-                                         <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
-                                         <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                                     </form>
-                                </td>
+                                <th>Booking ID</th>
+                                <th>Username</th>
+                                <th>Origin</th>
+                                <th>Destination</th>
+                                <th>Departure</th>
+                                <th>Return</th>
+                                <th>Class</th>
+                                <th>Airline</th>
+                                <th>Price (RM)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($booking_history as $booking): ?>
+                                <tr>
+                                    <td><?php echo htmlspecialchars($booking['history_id_formatted']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_username']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_origin_state'] . ', ' . $booking['book_origin_country']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_destination_state'] . ', ' . $booking['book_destination_country']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_departure']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_return']); ?></td>
+                                    <td><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['book_class']))); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_airlines']); ?></td>
+                                    <td><?php echo htmlspecialchars(number_format($booking['book_price'], 2)); ?></td>
+                                    <td>
+                                        <span class="status-<?php echo htmlspecialchars($booking['booking_status']); ?>">
+                                            <?php echo htmlspecialchars($booking['booking_status']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <form action="admin_update_booking_status.php" method="post" style="display:inline-block;">
+                                            <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
+                                            <select name="new_status" class="booking-status-select">
+                                                <option value="Pending" <?php echo ($booking['booking_status'] === 'Pending') ? 'selected' : ''; ?>>Pending</option>
+                                                <option value="Booked" <?php echo ($booking['booking_status'] === 'Booked') ? 'selected' : ''; ?>>Booked</option>
+                                                <option value="Cancelled" <?php echo ($booking['booking_status'] === 'Cancelled') ? 'selected' : ''; ?>>Cancelled</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-secondary btn-sm">Update</button>
+                                        </form>
+                                        <form action="admin_delete_booking.php" method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this booking?');">
+                                            <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
+                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
             <?php else: ?>
                 <p class="no-bookings">No user bookings found.</p>
             <?php endif; ?>
-
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>
 </html>

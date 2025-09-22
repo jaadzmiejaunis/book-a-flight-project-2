@@ -10,10 +10,10 @@ if (!isset($_SESSION['book_id'])) {
 
 // Retrieve user data from the session for display in the navbar
 $loggedIn = isset($_SESSION['book_id']);
-$username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest';
+$username = $loggedIn && isset($_SESSION['book_user_roles']) ? htmlspecialchars($_SESSION['book_user_roles']) : 'Guest';
 
 // Default profile picture path (replace with your actual path if different from index.php)
-$defaultProfilePicture = 'path/to/default-profile-picture.png'; // <<<--- UPDATE THIS PATH if needed
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png'; // <<<--- UPDATE THIS PATH if needed
 
 // Check if a custom profile picture URL is set and exists, otherwise use default
 $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
@@ -382,7 +382,7 @@ if (!$connection) {
 
     <div class="top-gradient-bar">
         <div class="container">
-            <a href="index.php" class="site-title">BookAFlight.com</a>
+            <a href="index.php" class="site-title">SierraFlight</a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                      <a href="profile_page.php">
