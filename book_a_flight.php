@@ -1,6 +1,7 @@
 <?php
 session_start();
 
+require 'config.php';
 include 'connection.php';
 
 // Check connection
@@ -29,9 +30,10 @@ mysqli_close($connection);
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <!-- Leaflet used for rendering map -->
+    <!-- Leaflet used for rendering map & paypal thing-->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://www.paypal.com/sdk/js?client-id=<?php echo $paypal_client_id ?>&currency=MYR"></script>
 
     <style>
         body {
@@ -377,7 +379,37 @@ mysqli_close($connection);
                             </select>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-primary">Search Flight</button>
+                    <!-- <button type="submit" class="btn btn-primary">Search Flight</button> -->
+                    <div id="paypal-button-container"></div>
+                    <script>
+                        paypal.Buttons({
+                            createOrder: function(data, actions) {
+                                let price = parseFloat(document.getElementById("resPrice").textContent);
+                                if (isNaN(price)) price = 500000.00;
+
+                                return fetch("create_order.php", { 
+                                    method: "POST",
+                                    headers: {"Content-Type":"application/json"},
+                                    body: JSON.stringify({amount: price.toFixed(2)})
+                                 })
+                                .then(res => res.json())
+                                .then(order => order.id);
+                            },
+                            onApprove: function(data, actions) {
+                                return fetch("capture_order.php", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ orderID: data.orderID })
+                                })
+                                .then(res => res.json())
+                                .then(details => {
+                                    console.log(details);
+                                    alert("Transaction completed in Sandbox!");
+                                });
+                                }
+                            }).render("#paypal-button-container");
+                    </script>
+
                     </form>
                 </div>
             </div>

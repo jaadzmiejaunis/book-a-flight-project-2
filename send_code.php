@@ -70,5 +70,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // if request sent is NOT post request.
     echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
 }
-
+$connection->close();
 ?>
