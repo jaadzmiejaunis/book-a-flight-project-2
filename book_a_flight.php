@@ -390,33 +390,28 @@ mysqli_close($connection);
 
             // reverse geocoding (basically to get location name from the longitude/latitude)
             function reverseGeocode(lat, lng, inputId) {
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`, {
-                    headers: {
-                        "User-Agent": "MyFlightApp/1.0 (myemail@example.com)",
-                        "Accept-Language": "en"
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data && data.address) {
-                        let addr = data.address;
-                        let city = addr.city || addr.town || addr.village || addr.hamlet || "";
-                        let state = addr.state || "";
-                        let country = addr.country || "";
+                fetch(`reverse_proxy.php?lat=${lat}&lon=${lng}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.address) {
+                            let addr = data.address;
+                            let city = addr.city || addr.town || addr.village || addr.hamlet || "";
+                            let state = addr.state || "";
+                            let country = addr.country || "";
 
-                        let formatted = [city, state, country].filter(Boolean).join(", ");
-
-                        document.getElementById(inputId).value = formatted ||
-                            (lat.toFixed(6) + ", " + lng.toFixed(6));
-                    } else {
+                            let formatted = [city, state, country].filter(Boolean).join(", ");
+                            document.getElementById(inputId).value = formatted ||
+                                (lat.toFixed(6) + ", " + lng.toFixed(6));
+                        } else {
+                            document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Reverse geocoding failed:", err);
                         document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
-                    }
-                })
-                .catch(err => {
-                    console.error("Reverse geocoding failed:", err);
-                    document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
-                });
+                    });
             }
+
 
             // update input on marker dragged end
             function updateInput(marker, inputId) {
