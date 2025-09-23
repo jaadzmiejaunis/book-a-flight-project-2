@@ -1,120 +1,23 @@
 <?php
-session_start(); // Start the session
+session_start();
 
-// --- Database Connection ---
-// In a production environment, store credentials in a configuration file outside the web root.
 include 'connection.php';
 
 // Check connection
 if (!$connection) {
-    // Log the error to the server logs
-    error_log("Database connection failed: " . mysqli_connect_error()); // This logs the specific error! CHECK YOUR SERVER LOGS!
-    // Display a generic error message to the user
+    error_log("Database connection failed: " . mysqli_connect_error());
     die("An error occurred connecting to the database to fetch flights. Please try again later.");
 }
-// --- End Database Connection ---
 
-
-// Retrieve user data from the session for display in the navbar (assuming consistent session handling)
-$loggedIn = isset($_SESSION['book_id']); // Check logged-in status
-$username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest'; // Get username from session
-
-// Default profile picture path (replace with your actual path)
-$defaultProfilePicture = 'path/to/default-profile-picture.png'; // <<<--- UPDATE THIS PATH
-
-// Check if a custom profile picture URL is set and exists, otherwise use default
+$loggedIn = isset($_SESSION['book_id']); 
+$username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest'; 
+$defaultProfilePicture = 'path/to/default-profile-picture.png'; 
 $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
 
-// Optional: Check if the profile picture file exists to avoid broken images
-// if (!file_exists($profilePictureUrl) && $profilePictureUrl !== $defaultProfilePicture) {
-//     $profilePictureUrl = $defaultProfilePicture;
-// }
+$search_from = trim($_GET['from_location'] ?? ''); 
+$search_to = trim($_GET['to_location'] ?? '');
 
-
-// --- Fetch Flight Data with Search/Filtering ---
-$flights = []; // Initialize an empty array to store flight data
-$error_message = ''; // Initialize error message
-
-// Get search terms from GET request
-$search_from = trim($_GET['from_location'] ?? ''); // 'from_location' is the name of the input field
-$search_to = trim($_GET['to_location'] ?? '');  // 'to_location' is the name of the input field
-
-// Build the SQL query and parameters dynamically based on search terms
-$sql = "SELECT book_id, book_origin_state, book_origin_country, book_destination_state, book_destination_country, book_departure, book_return, book_class, book_airlines, book_price FROM BookFlight"; // Start with the base query
-$where_clauses = []; // Array to hold WHERE conditions
-$param_types = ""; // String to hold parameter types for prepared statement
-$param_values = []; // Array to hold parameter values for prepared statement
-
-// Add WHERE clauses if search terms are provided
-if (!empty($search_from)) {
-    // Search in origin state OR country for the 'From' term
-    $where_clauses[] = "(book_origin_state LIKE ? OR book_origin_country LIKE ?)";
-    $param_types .= "ss";
-    $param_values[] = '%' . $search_from . '%'; // Add wildcards for partial matching
-    $param_values[] = '%' . $search_from . '%';
-}
-
-if (!empty($search_to)) {
-    // Search in destination state OR country for the 'To' term
-    $where_clauses[] = "(book_destination_state LIKE ? OR book_destination_country LIKE ?)";
-    $param_types .= "ss";
-    $param_values[] = '%' . $search_to . '%'; // Add wildcards for partial matching
-    $param_values[] = '%' . $search_to . '%';
-}
-
-// Combine WHERE clauses if any exist
-if (!empty($where_clauses)) {
-    $sql .= " WHERE " . implode(" AND ", $where_clauses); // Use AND to combine multiple conditions
-}
-
-// Add ORDER BY clause
-$sql .= " ORDER BY book_departure ASC"; // Example: order by departure date
-
-// Prepare the statement
-$stmt = mysqli_prepare($connection, $sql);
-
-if ($stmt) {
-    // Bind parameters if there are any search terms
-    if (!empty($param_values)) {
-        // mysqli_stmt_bind_param requires parameters to be passed by reference.
-        // Use call_user_func_array to bind the variable number of parameters.
-        mysqli_stmt_bind_param($stmt, $param_types, ...$param_values);
-        // Note: Using '...' (splat operator) requires PHP 5.6 or later.
-        // For older PHP, use call_user_func_array: call_user_func_array('mysqli_stmt_bind_param', array_merge([$stmt, $param_types], $param_values));
-    }
-
-    // Execute the statement
-    if (mysqli_stmt_execute($stmt)) {
-        // Get the result
-        $result = mysqli_stmt_get_result($stmt);
-
-        // Fetch rows from the result set
-        while ($row = mysqli_fetch_assoc($result)) {
-            $flights[] = $row; // Add each flight row to the $flights array
-        }
-
-        // Free the result set
-        mysqli_free_result($result);
-    } else {
-        // Query execution failed
-        error_log("Database query execution error: " . mysqli_error($connection));
-        $error_message = "An error occurred fetching flights. Please try again.";
-    }
-
-    // Close the prepared statement
-    mysqli_stmt_close($stmt);
-} else {
-    // Prepared statement failed
-    error_log("Database prepare error: " . mysqli_error($connection) . " SQL: " . $sql);
-    $error_message = "An internal error occurred preparing to fetch flights.";
-}
-
-
-// Close database connection
 mysqli_close($connection);
-
-// Determine the current page for active class (optional, removed as per user request)
-// $currentPage = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -125,6 +28,11 @@ mysqli_close($connection);
     <title>Book a Flight</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- Leaflet used for rendering map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
     <style>
         body {
             background-color: #1e1e2d;
@@ -385,8 +293,9 @@ mysqli_close($connection);
 
     </style>
 </head>
-<body>
 
+<body>
+    <!-- Most upper bar -->
     <div class="top-gradient-bar">
         <div class="container"> <a href="index.php" class="site-title">SierraFlight</a>
             <div class="user-info">
@@ -407,6 +316,7 @@ mysqli_close($connection);
         </div>
     </div>
 
+    <!-- Second upper bar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container"> <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
@@ -440,54 +350,101 @@ mysqli_close($connection);
 
         <div class="search-container">
             <form action="book_a_flight.php" method="get" class="search-form">
-                <div class="form-row">
-                    <div class="form-group col-md-5">
-                        <label for="from_location">From:</label>
-                        <input type="text" class="form-control" id="from_location" name="from_location" placeholder="Origin (State or Country)" value="<?php echo htmlspecialchars($search_from); ?>">
-                    </div>
-                    <div class="form-group col-md-5">
-                         <label for="to_location">To:</label>
-                         <input type="text" class="form-control" id="to_location" name="to_location" placeholder="Destination (State or Country)" value="<?php echo htmlspecialchars($search_to); ?>">
-                    </div>
-                     <div class="col-md-2 d-flex align-items-end">
-                         <button class="btn btn-primary btn-block" type="submit">
-                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                                 <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                             </svg>
-                             Search
-                         </button>
-                     </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                <label for="from_location">From:</label>
+                <input type="text" class="form-control" id="from_location" name="from_location" 
+                    placeholder="Origin" value="<?php echo htmlspecialchars($search_from); ?> " readonly>
+                <div id="mapFrom" style="height:250px; margin-top:10px; border-radius:8px;"></div>
                 </div>
-            </form>
+
+                <div class="form-group col-md-6">
+                <label for="to_location">To:</label>
+                <input type="text" class="form-control" id="to_location" name="to_location" 
+                    placeholder="Destination" value="<?php echo htmlspecialchars($search_to); ?>" readonly>
+                <div id="mapTo" style="height:250px; margin-top:10px; border-radius:8px;"></div>
+                </div>
             </div>
-
-        <div class="flight-list-container">
-            <?php if (isset($error_message) && !empty($error_message)): ?>
-                <div class="alert alert-danger" role="alert">
-                    <?php echo $error_message; ?>
-                </div>
-            <?php elseif (!empty($flights)): ?>
-                <div class="row">
-                    <?php foreach ($flights as $flight): ?>
-                        <div class="col-md-6 col-lg-4">
-                            <div class="flight-card" data-flight-id="<?php echo htmlspecialchars($flight['book_id']); ?>">
-                                <h5><?php echo htmlspecialchars($flight['book_origin_state'] . ', ' . $flight['book_origin_country']); ?> to <?php echo htmlspecialchars($flight['book_destination_state'] . ', ' . $flight['book_destination_country']); ?></h5>
-                                <p>Departure: <?php echo htmlspecialchars($flight['book_departure']); ?></p>
-                                <p>Return: <?php echo htmlspecialchars($flight['book_return']); ?></p>
-                                <p>Class: <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $flight['book_class']))); ?></p>
-                                <p>Airline: <?php echo htmlspecialchars($flight['book_airlines']); ?></p>
-                                <p>Price: RM <?php echo htmlspecialchars(number_format($flight['book_price'], 2)); ?></p>
-                                <a href="book_a_flight_detail.php?flight_id=<?php echo htmlspecialchars($flight['book_id']); ?>" class="btn btn-primary btn-sm mt-2">View Details</a>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            <?php else: ?>
-                <p class="text-center">No flights found matching your criteria.</p>
-            <?php endif; ?>
+            <button type="submit" class="btn btn-primary">Search Flight</button>
+            </form>
         </div>
-
     </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // init maps
+            var mapFrom = L.map('mapFrom').setView([3.1390, 101.6869], 5); 
+            var mapTo   = L.map('mapTo').setView([3.1390, 101.6869], 5);
+
+            // display/render the map
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mapFrom);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(mapTo);
+
+            // place initial markers
+            var markerFrom = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapFrom);
+            var markerTo   = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapTo);
+
+            // reverse geocoding (basically to get location name from the longitude/latitude)
+            function reverseGeocode(lat, lng, inputId) {
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&addressdetails=1`, {
+                    headers: {
+                        "User-Agent": "MyFlightApp/1.0 (myemail@example.com)",
+                        "Accept-Language": "en"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.address) {
+                        let addr = data.address;
+                        let city = addr.city || addr.town || addr.village || addr.hamlet || "";
+                        let state = addr.state || "";
+                        let country = addr.country || "";
+
+                        let formatted = [city, state, country].filter(Boolean).join(", ");
+
+                        document.getElementById(inputId).value = formatted ||
+                            (lat.toFixed(6) + ", " + lng.toFixed(6));
+                    } else {
+                        document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
+                    }
+                })
+                .catch(err => {
+                    console.error("Reverse geocoding failed:", err);
+                    document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
+                });
+            }
+
+            // update input on marker dragged end
+            function updateInput(marker, inputId) {
+                var pos = marker.getLatLng();
+                reverseGeocode(pos.lat, pos.lng, inputId);
+            }
+
+            // set marker dropped data to variables: from_location & to_location
+            markerFrom.on('dragend', function() { updateInput(markerFrom, 'from_location'); });
+            markerTo.on('dragend', function() { updateInput(markerTo, 'to_location'); });
+
+            // if browser allows location permission, set starting position to user location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                var lat = position.coords.latitude;
+                var lng = position.coords.longitude;
+                mapFrom.setView([lat, lng], 10);
+                markerFrom.setLatLng([lat, lng]);
+                updateInput(markerFrom, 'from_location');
+                });
+            }
+
+            updateInput(markerFrom, 'from_location');
+            updateInput(markerTo, 'to_location');
+        });     
+    </script>
+
+
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
