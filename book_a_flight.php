@@ -354,14 +354,14 @@ mysqli_close($connection);
                 <div class="form-group col-md-6">
                 <label for="from_location">From:</label>
                 <input type="text" class="form-control" id="from_location" name="from_location" 
-                    placeholder="Origin" value="<?php echo htmlspecialchars($search_from); ?> " readonly>
+                    placeholder="Origin" value="<?php echo htmlspecialchars($search_from); ?> ">
                 <div id="mapFrom" style="height:250px; margin-top:10px; border-radius:8px;"></div>
                 </div>
 
                 <div class="form-group col-md-6">
                 <label for="to_location">To:</label>
                 <input type="text" class="form-control" id="to_location" name="to_location" 
-                    placeholder="Destination" value="<?php echo htmlspecialchars($search_to); ?>" readonly>
+                    placeholder="Destination" value="<?php echo htmlspecialchars($search_to); ?>">
                 <div id="mapTo" style="height:250px; margin-top:10px; border-radius:8px;"></div>
                 </div>
             </div>
@@ -411,6 +411,36 @@ mysqli_close($connection);
                         document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
                     });
             }
+            
+            // search via textboxes
+            function searchLocation(query, map, marker, inputId) {
+                fetch(`search_proxy.php?q=${encodeURIComponent(query)}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data.length > 0) {
+                            let place = data[0];
+                            let lat = parseFloat(place.lat);
+                            let lon = parseFloat(place.lon);
+
+                            map.setView([lat, lon], 10);
+                            marker.setLatLng([lat, lon]);
+
+                            // update textbox with formatted name (optional)
+                            document.getElementById(inputId).value = place.display_name;
+                        } else {
+                            alert("No results found for: " + query);
+                        }
+                    })
+                    .catch(err => console.error("Search failed:", err));
+            }
+
+            document.getElementById("from_location").addEventListener("change", function() {
+                searchLocation(this.value, mapFrom, markerFrom, "from_location");
+            });
+
+            document.getElementById("to_location").addEventListener("change", function() {
+                searchLocation(this.value, mapTo, markerTo, "to_location");
+            });
 
 
             // update input on marker dragged end
