@@ -25,7 +25,7 @@ $user_id = $_SESSION['book_id'];
 
 // Define the default profile picture path (web-accessible)
 // **UPDATED PATH based on your XAMPP structure**
-$defaultProfilePicture = '/college_project/book-a-flight-project/image_website/default_profile.png';
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/profile_pictures/default_profile.png';
 
 // Fetch user data from the database
 $sql = "SELECT book_username, book_email, book_profile FROM BookUser WHERE book_id = ?";
@@ -90,7 +90,7 @@ unset($_SESSION['profile_error_message']);
 $navbarProfilePictureUrl = $_SESSION['profile_picture_url'] ?? $profilePictureUrl;
 
 // Fallback to default if session variable is empty or contains the old incorrect path
-if (empty($navbarProfilePictureUrl) || $navbarProfilePictureUrl === 'path/to/default-profile-picture.png') {
+if (empty($navbarProfilePictureUrl) || $navbarProfilePictureUrl === '/college_project/book-a-flight-project-2/image_website/profile_pictures/default_profile.png') {
     $navbarProfilePictureUrl = $defaultProfilePicture;
 }
 
@@ -421,7 +421,7 @@ if (empty($navbarProfilePictureUrl) || $navbarProfilePictureUrl === 'path/to/def
                 <?php if (isset($_SESSION['book_id'])): ?>
                      <a href="profile_page.php">
                          Profile
-                         <?php if ($navbarProfilePictureUrl === 'path/to/default-profile-picture.png'): ?> <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
+                         <?php if ($navbarProfilePictureUrl === '/college_project/book-a-flight-project-2/image_website/profile_pictures/default_profile.png'): ?> <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
                          <?php else: ?>
                               <img src="<?php echo htmlspecialchars($navbarProfilePictureUrl); ?>" alt="Profile Picture" class="profile-picture-nav">
                          <?php endif; ?>

@@ -81,9 +81,14 @@ if (isset($_POST['signup'])) {
         // Hash the password securely
         // echo "DEBUG (Sign-up): Raw password BEFORE hashing: '" . $password . "'<br>"; // TEMPORARY DEBUG - REMOVE IN PRODUCTION
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        
+        // Define the default user role and status
+        $user_role = 'Customer';
+        $user_status = 'Active';
 
-        // SQL to insert user data using prepared statement
-        $insert_sql = "INSERT INTO BookUser (book_username, book_password, book_email) VALUES (?, ?, ?)";
+        // SQL to insert user data including the default role and status
+        // Added 'book_user_roles' and 'book_user_status' to the INSERT statement
+        $insert_sql = "INSERT INTO BookUser (book_username, book_password, book_email, book_user_roles, book_user_status) VALUES (?, ?, ?, ?, ?)";
 
         // Prepare the statement
         $stmt_insert = mysqli_prepare($connection, $insert_sql);
@@ -91,7 +96,8 @@ if (isset($_POST['signup'])) {
         // Check if statement preparation was successful
         if ($stmt_insert) {
             // Bind parameters (s = string)
-            mysqli_stmt_bind_param($stmt_insert, "sss", $username, $hashed_password, $email);
+            // Added two 's' for the new parameters 'book_user_roles' and 'book_user_status'
+            mysqli_stmt_bind_param($stmt_insert, "sssss", $username, $hashed_password, $email, $user_role, $user_status);
 
             // Execute the statement
             if (mysqli_stmt_execute($stmt_insert)) {
@@ -545,7 +551,7 @@ $profilePictureUrl = $defaultProfilePicture;
                     } else {
                         clearInterval(timer);
                         getCodeButton.disabled = false;
-                        getCodeButton.textContent = 'Send';
+                        getCodeCodeButton.textContent = 'Send';
                     }
                 }, 1000);
 

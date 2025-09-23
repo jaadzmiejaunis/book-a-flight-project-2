@@ -23,8 +23,10 @@
         book_username VARCHAR(50) NOT NULL UNIQUE,
         book_password VARCHAR(255) NOT NULL, 
         book_email VARCHAR(100) NOT NULL UNIQUE,
-        book_profile VARCHAR(255) NULL, 
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        book_profile VARCHAR(255) NULL,
+        book_user_roles VARCHAR(50) NOT NULL, 
+        book_user_register_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        book_user_status VARCHAR(50) NOT NULL
     );";
 
     $sql_create_bookflight = "CREATE TABLE IF NOT EXISTS BookFlight (
@@ -38,7 +40,7 @@
     book_class VARCHAR(50) NOT NULL,
     book_airlines VARCHAR(100) NOT NULL,
     book_price DECIMAL(10, 2) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    book_user_register_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );";
 
     $sql_create_bookhistory = "CREATE TABLE IF NOT EXISTS BookHistory (

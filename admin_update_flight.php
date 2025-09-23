@@ -3,7 +3,7 @@ session_start(); // Start the session
 
 // --- Admin Authentication Check ---
 // Ensures only logged-in admins can access this script
-if (!isset($_SESSION['book_id']) || $_SESSION['username'] !== 'Admin') {
+if (!isset($_SESSION['book_id']) || !isset($_SESSION['book_user_roles']) || $_SESSION['book_user_roles'] !== 'Admin') {
     // Redirect to login page or show an access denied message
     header('Location: login_page.php'); // Redirect to your login page
     exit();
