@@ -348,29 +348,58 @@ mysqli_close($connection);
     <div class="container page-content">
         <h2 class="text-center mb-4" style="color: white;">Search Flights</h2>
 
-        <div class="search-container">
-            <form action="book_a_flight.php" method="get" class="search-form">
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                <label for="from_location">From:</label>
-                <input type="text" class="form-control" id="from_location" name="from_location" 
-                    placeholder="Origin" value="<?php echo htmlspecialchars($search_from); ?> ">
-                <div id="mapFrom" style="height:250px; margin-top:10px; border-radius:8px;"></div>
-                </div>
+        <div class="row">
+            <!-- Left -->
+            <div class="col-md-6">
+                <div class="flight-card">
+                    <form action="book_a_flight.php" method="get" class="search-form">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="from_location">From:</label>
+                            <input type="text" class="form-control" id="from_location" name="from_location" 
+                                placeholder="Origin" value="<?php echo htmlspecialchars($search_from); ?> ">
+                            <div id="mapFrom" style="height:250px; margin-top:10px; border-radius:8px;"></div>
+                        </div>
 
-                <div class="form-group col-md-6">
-                <label for="to_location">To:</label>
-                <input type="text" class="form-control" id="to_location" name="to_location" 
-                    placeholder="Destination" value="<?php echo htmlspecialchars($search_to); ?>">
-                <div id="mapTo" style="height:250px; margin-top:10px; border-radius:8px;"></div>
+                        <div class="form-group col-md-6">
+                            <label for="to_location">To:</label>
+                            <input type="text" class="form-control" id="to_location" name="to_location" 
+                                placeholder="Destination" value="<?php echo htmlspecialchars($search_to); ?>">
+                            <div id="mapTo" style="height:250px; margin-top:10px; border-radius:8px;"></div>
+                        </div>
+                    
+                        <div class="form-group col-md-6">
+                            <label for="travelClass">Choose Travel Class:</label>
+                            <select class="form-control" id="travelClass" name="travelClass">
+                                <option value="economy">Economy</option>
+                                <option value="business">Business</option>
+                                <option value="first">First</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Search Flight</button>
+                    </form>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary">Search Flight</button>
-            </form>
+
+            <!-- Right -->
+            <div class="col-md-6">
+                <div id="travelDataResult" class="flight-card" style="display:block;">
+                    <h5>Flight Information</h5>
+                    <p><strong>From:</strong> <span id="resFrom"></span></p>
+                    <p><strong>To:</strong> <span id="resTo"></span></p>
+                    <p><strong>Distance:</strong> <span id="resDistance"></span> km</p>
+                    <p><strong>Estimated Time:</strong> <span id="resTime"></span> hours</p>
+                    <p><strong>Estimated Price:</strong> RM <span id="resPrice"></span></p>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
+        let markerFrom, markerTo;
+
+        // geolocation related things here cuh
         document.addEventListener("DOMContentLoaded", function () {
             // init maps
             var mapFrom = L.map('mapFrom').setView([3.1390, 101.6869], 5); 
@@ -385,26 +414,21 @@ mysqli_close($connection);
             }).addTo(mapTo);
 
             // place initial markers
-            var markerFrom = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapFrom);
-            var markerTo   = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapTo);
+            markerFrom = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapFrom);
+            markerTo = L.marker([3.1390, 101.6869], {draggable:true}).addTo(mapTo);
 
             // reverse geocoding (basically to get location name from the longitude/latitude)
             function reverseGeocode(lat, lng, inputId) {
-                fetch(`reverse_proxy.php?lat=${lat}&lon=${lng}`)
+                return fetch(`reverse_proxy.php?lat=${lat}&lon=${lng}`)
                     .then(response => response.json())
                     .then(data => {
+                        let formatted = lat.toFixed(6) + ", " + lng.toFixed(6);
                         if (data && data.address) {
                             let addr = data.address;
-                            let city = addr.city || addr.town || addr.village || addr.hamlet || "";
-                            let state = addr.state || "";
-                            let country = addr.country || "";
-
-                            let formatted = [city, state, country].filter(Boolean).join(", ");
-                            document.getElementById(inputId).value = formatted ||
-                                (lat.toFixed(6) + ", " + lng.toFixed(6));
-                        } else {
-                            document.getElementById(inputId).value = lat.toFixed(6) + ", " + lng.toFixed(6);
+                            formatted = [addr.city || addr.town || addr.village || "", addr.state || "", addr.country || ""]
+                                .filter(Boolean).join(", ");
                         }
+                        document.getElementById(inputId).value = formatted;
                     })
                     .catch(err => {
                         console.error("Reverse geocoding failed:", err);
@@ -427,6 +451,7 @@ mysqli_close($connection);
 
                             // update textbox with formatted name (optional)
                             document.getElementById(inputId).value = place.display_name;
+                            updateTravelDataPanel();
                         } else {
                             alert("No results found for: " + query);
                         }
@@ -446,8 +471,11 @@ mysqli_close($connection);
             // update input on marker dragged end
             function updateInput(marker, inputId) {
                 var pos = marker.getLatLng();
-                reverseGeocode(pos.lat, pos.lng, inputId);
-            }
+                reverseGeocode(pos.lat, pos.lng, inputId)
+                    .then(() => {
+                        updateTravelDataPanel(); // now updates after reverse geocoding finishes
+                    });
+            }   
 
             // set marker dropped data to variables: from_location & to_location
             markerFrom.on('dragend', function() { updateInput(markerFrom, 'from_location'); });
@@ -464,8 +492,46 @@ mysqli_close($connection);
                 });
             }
 
+            // initialize panel
             updateInput(markerFrom, 'from_location');
             updateInput(markerTo, 'to_location');
+
+            // real-time result updating
+            function updateTravelDataPanel() {
+                let fromCoords = markerFrom.getLatLng();
+                let toCoords = markerTo.getLatLng();
+                let fromName = document.getElementById("from_location").value;
+                let toName = document.getElementById("to_location").value;
+
+                let distance = calculateDistance(fromCoords.lat, fromCoords.lng, toCoords.lat, toCoords.lng);
+                let timeEstimation = distance / 885;
+                let baseFare = 100;
+                let perKmRate = 0.5;
+                let selectedTravelClass = document.getElementById("travelClass").value;
+                let classMult = { economy: 1, business: 2.2, first: 4 };
+                let priceEstimation = (baseFare + (distance * perKmRate)) * classMult[selectedTravelClass];
+
+                document.getElementById("resFrom").textContent = fromName;
+                document.getElementById("resTo").textContent = toName;
+                document.getElementById("resDistance").textContent = distance.toFixed(2);
+                document.getElementById("resTime").textContent = timeEstimation.toFixed(2);
+                document.getElementById("resPrice").textContent = priceEstimation.toFixed(2);
+            }
+
+            // calculate distance using latitude/longitude using haversine formula
+            function calculateDistance(lat1, lon1, lat2, lon2){
+                function toRad(x) { return x * Math.PI / 180; }
+                let earthRadius = 6371;
+                let distanceLat = toRad(lat2 - lat1);
+                let distanceLon = toRad(lon2 - lon1);
+                let a = Math.sin(distanceLat/2) * Math.sin(distanceLat/2) +
+                        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                        Math.sin(distanceLon/2) * Math.sin(distanceLon/2);
+                let c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                return earthRadius * c;
+            }
+
+            document.getElementById("travelClass").addEventListener("change", updateTravelDataPanel);
         });     
     </script>
 
