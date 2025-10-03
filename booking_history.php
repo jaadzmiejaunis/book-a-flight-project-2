@@ -16,10 +16,8 @@ $defaultProfilePicture = 'path/to/default-profile-picture.png'; // <<<--- UPDATE
 
 $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
 
-
 // Get the logged-in user's ID from the session
 $user_id = $_SESSION['book_id'];
-
 
 // --- Database Connection ---
 include 'connection.php';
@@ -30,13 +28,33 @@ if (!$connection) {
 }
 // --- End Database Connection ---
 
-
 // --- Fetch Booking History for the Logged-in User ---
 $booking_history = []; // Initialize an empty array to store booking history
 $error_message = '';
 
-// SQL to select booking history for the current user
-$sql = "SELECT history_id, book_origin_state, book_origin_country, book_destination_state, book_destination_country, book_departure, book_return, book_class, book_airlines, book_price, booking_date, booking_status FROM BookHistory WHERE user_id = ? ORDER BY booking_date DESC"; // Order by booking date (most recent first)
+// Corrected SQL to select booking history for the current user by joining tables
+$sql = "SELECT
+            s.book_id,
+            s.book_class,
+            s.book_airlines,
+            s.booking_status,
+            s.booking_date,
+            pl.book_origin_state,
+            pl.book_origin_country,
+            pl.book_destination_state,
+            pl.book_destination_country,
+            pl.book_departure,
+            pl.book_return,
+            p.book_total_price
+        FROM
+            BookFlightStatus s
+        JOIN
+            BookFlightPlace pl ON s.book_id = pl.book_id AND s.user_id = pl.user_id
+        JOIN
+            BookFlightPrice p ON s.book_id = p.book_id AND s.user_id = p.user_id
+        WHERE
+            s.user_id = ?
+        ORDER BY s.booking_date DESC";
 
 // Prepare the statement
 $stmt = mysqli_prepare($connection, $sql);
@@ -71,10 +89,8 @@ if ($stmt) {
     $error_message = "An internal error occurred preparing to fetch booking history.";
 }
 
-
 // Close database connection
 mysqli_close($connection);
-
 ?>
 
 <!DOCTYPE html>
@@ -308,6 +324,18 @@ mysqli_close($connection);
             border-color: #f5c6cb;
         }
 
+        .btn-info {
+            background-color: #ffb03a;
+            border-color: #ffb03a;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .btn-info:hover {
+            background-color: #e09e2a;
+            border-color: #e09e2a;
+        }
+
     </style>
 </head>
 <body>
@@ -371,7 +399,7 @@ mysqli_close($connection);
             <?php elseif (!empty($booking_history)): ?>
                 <?php foreach ($booking_history as $booking): ?>
                     <div class="booking-card">
-                        <h5>Booking ID: <?php echo htmlspecialchars($booking['history_id']); ?></h5>
+                        <h5>Booking ID: <?php echo htmlspecialchars($booking['book_id']); ?></h5>
                         <p><strong>Route:</strong> <?php echo htmlspecialchars($booking['book_origin_state'] . ', ' . $booking['book_origin_country']); ?> to <?php echo htmlspecialchars($booking['book_destination_state'] . ', ' . $booking['book_destination_country']); ?></p>
                         <p><strong>Dates:</strong> Departure: <?php echo htmlspecialchars($booking['book_departure']); ?> | Return: <?php echo htmlspecialchars($booking['book_return']); ?></p>
                         <p><strong>Details:</strong> Class: <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['book_class']))); ?> | Airline: <?php echo htmlspecialchars($booking['book_airlines']); ?></p>
@@ -383,8 +411,11 @@ mysqli_close($connection);
                                 Status: <?php echo htmlspecialchars($booking['booking_status']); ?>
                             </span>
                             <div class="booking-price">
-                                Price: RM <?php echo htmlspecialchars(number_format($booking['book_price'], 2)); ?>
+                                Price: RM <?php echo htmlspecialchars(number_format($booking['book_total_price'], 2)); ?>
                             </div>
+                            <?php if ($booking['booking_status'] === 'Booked'): ?>
+                                <a href="reciept_page.php?bookId=<?php echo htmlspecialchars($booking['book_id']); ?>" class="btn btn-info btn-sm ml-2">View Receipt</a>
+                            <?php endif; ?>
                          </div>
                     </div>
                 <?php endforeach; ?>
