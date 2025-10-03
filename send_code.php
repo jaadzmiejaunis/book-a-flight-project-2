@@ -1,4 +1,7 @@
 <?php
+
+require 'connection.php';
+
 // expects data sent is json format.
 header('Content-Type: application/json');
 
