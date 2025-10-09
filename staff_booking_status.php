@@ -52,8 +52,27 @@ if ($loggedIn) {
 $booking_history = [];
 $error_message = '';
 
-// Define your SQL query to select all booking information, including the formatted history_id
-$sql_history = "SELECT CONCAT('FL', LPAD(history_id, 2, '0')) AS history_id_formatted, history_id, user_id, book_username, book_origin_state, book_origin_country, book_destination_state, book_destination_country, book_departure, book_return, book_class, book_airlines, book_price, booking_date, booking_status FROM BookHistory ORDER BY booking_date DESC";
+// Updated SQL query to get data from BookFlightStatus with location information
+$sql_history = "SELECT 
+    bs.status_id,
+    bs.book_id,
+    bs.user_id,
+    bs.book_username,
+    fp.book_origin_state,
+    fp.book_origin_country,
+    fp.book_destination_state,
+    fp.book_destination_country,
+    fp.book_departure,
+    fp.book_return,
+    bs.book_class,
+    bs.book_airlines,
+    bs.book_price,
+    bs.booking_date,
+    bs.booking_status,
+    CONCAT('FL', LPAD(bs.status_id, 2, '0')) AS booking_id_formatted
+FROM BookFlightStatus bs
+LEFT JOIN BookFlightPlace fp ON bs.book_id = fp.book_id AND bs.user_id = fp.user_id
+ORDER BY bs.booking_date DESC";
 
 // Use a prepared statement for security
 if ($stmt_history = mysqli_prepare($connection, $sql_history)) {
@@ -72,6 +91,84 @@ if ($stmt_history = mysqli_prepare($connection, $sql_history)) {
     mysqli_stmt_close($stmt_history);
 } else {
     $error_message = "Error preparing query: " . mysqli_error($connection);
+}
+
+// --- Handle Status Update ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status_id']) && isset($_POST['new_status'])) {
+    $status_id = $_POST['status_id'];
+    $new_status = $_POST['new_status'];
+    
+    // Update status in BookFlightStatus table
+    $update_sql = "UPDATE BookFlightStatus SET booking_status = ? WHERE status_id = ?";
+    $update_stmt = mysqli_prepare($connection, $update_sql);
+    mysqli_stmt_bind_param($update_stmt, "si", $new_status, $status_id);
+    
+    if (mysqli_stmt_execute($update_stmt)) {
+        $_SESSION['process_message'] = "Booking status updated successfully!";
+        $_SESSION['message_type'] = "success";
+        
+        // Also update BookHistory table if the record exists
+        $update_history_sql = "UPDATE BookHistory SET booking_status = ? WHERE history_id = ?";
+        $update_history_stmt = mysqli_prepare($connection, $update_history_sql);
+        mysqli_stmt_bind_param($update_history_stmt, "si", $new_status, $status_id);
+        mysqli_stmt_execute($update_history_stmt);
+        mysqli_stmt_close($update_history_stmt);
+    } else {
+        $_SESSION['process_message'] = "Error updating booking status: " . mysqli_error($connection);
+        $_SESSION['message_type'] = "danger";
+    }
+    mysqli_stmt_close($update_stmt);
+    
+    // Redirect to refresh the page and show message
+    header("Location: staff_booking_status.php");
+    exit();
+}
+
+// --- Handle Booking Deletion ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_status_id'])) {
+    $status_id = $_POST['delete_status_id'];
+    
+    // Get book_id before deletion for cleaning up related tables
+    $get_book_sql = "SELECT book_id, user_id FROM BookFlightStatus WHERE status_id = ?";
+    $get_book_stmt = mysqli_prepare($connection, $get_book_sql);
+    mysqli_stmt_bind_param($get_book_stmt, "i", $status_id);
+    mysqli_stmt_execute($get_book_stmt);
+    $book_result = mysqli_stmt_get_result($get_book_stmt);
+    $book_data = mysqli_fetch_assoc($book_result);
+    mysqli_stmt_close($get_book_stmt);
+    
+    if ($book_data) {
+        $book_id = $book_data['book_id'];
+        $user_id = $book_data['user_id'];
+        
+        // Delete from BookFlightStatus
+        $delete_sql = "DELETE FROM BookFlightStatus WHERE status_id = ?";
+        $delete_stmt = mysqli_prepare($connection, $delete_sql);
+        mysqli_stmt_bind_param($delete_stmt, "i", $status_id);
+        
+        if (mysqli_stmt_execute($delete_stmt)) {
+            // Also delete from related tables
+            $tables_to_clean = ['BookFlightPlace', 'BookFlightPassenger', 'BookFlightPrice', 'BookHistory'];
+            foreach ($tables_to_clean as $table) {
+                $clean_sql = "DELETE FROM $table WHERE book_id = ? AND user_id = ?";
+                $clean_stmt = mysqli_prepare($connection, $clean_sql);
+                mysqli_stmt_bind_param($clean_stmt, "si", $book_id, $user_id);
+                mysqli_stmt_execute($clean_stmt);
+                mysqli_stmt_close($clean_stmt);
+            }
+            
+            $_SESSION['process_message'] = "Booking deleted successfully!";
+            $_SESSION['message_type'] = "success";
+        } else {
+            $_SESSION['process_message'] = "Error deleting booking: " . mysqli_error($connection);
+            $_SESSION['message_type'] = "danger";
+        }
+        mysqli_stmt_close($delete_stmt);
+    }
+    
+    // Redirect to refresh the page and show message
+    header("Location: staff_booking_status.php");
+    exit();
 }
 
 // Close database connection
@@ -95,6 +192,7 @@ unset($_SESSION['message_type']);
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        /* Your existing CSS styles remain the same */
         body {
             background-color: #1e1e2d;
             color: #e0e0e0;
@@ -397,6 +495,9 @@ unset($_SESSION['message_type']);
                     <li class="nav-item">
                         <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="profile_page.php">Profile</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -439,12 +540,12 @@ unset($_SESSION['message_type']);
                         <tbody>
                             <?php foreach ($booking_history as $booking): ?>
                                 <tr>
-                                    <td><?php echo htmlspecialchars($booking['history_id_formatted']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['booking_id_formatted']); ?></td>
                                     <td><?php echo htmlspecialchars($booking['book_username']); ?></td>
                                     <td><?php echo htmlspecialchars($booking['book_origin_state'] . ', ' . $booking['book_origin_country']); ?></td>
                                     <td><?php echo htmlspecialchars($booking['book_destination_state'] . ', ' . $booking['book_destination_country']); ?></td>
                                     <td><?php echo htmlspecialchars($booking['book_departure']); ?></td>
-                                    <td><?php echo htmlspecialchars($booking['book_return']); ?></td>
+                                    <td><?php echo htmlspecialchars($booking['book_return'] ?? 'One-way'); ?></td>
                                     <td><?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $booking['book_class']))); ?></td>
                                     <td><?php echo htmlspecialchars($booking['book_airlines']); ?></td>
                                     <td><?php echo htmlspecialchars(number_format($booking['book_price'], 2)); ?></td>
@@ -454,8 +555,8 @@ unset($_SESSION['message_type']);
                                         </span>
                                     </td>
                                     <td>
-                                        <form action="admin_update_booking_status.php" method="post" style="display:inline-block;">
-                                            <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
+                                        <form method="post" style="display:inline-block;">
+                                            <input type="hidden" name="status_id" value="<?php echo htmlspecialchars($booking['status_id']); ?>">
                                             <select name="new_status" class="booking-status-select">
                                                 <option value="Pending" <?php echo ($booking['booking_status'] === 'Pending') ? 'selected' : ''; ?>>Pending</option>
                                                 <option value="Booked" <?php echo ($booking['booking_status'] === 'Booked') ? 'selected' : ''; ?>>Booked</option>
@@ -463,8 +564,8 @@ unset($_SESSION['message_type']);
                                             </select>
                                             <button type="submit" class="btn btn-secondary btn-sm">Update</button>
                                         </form>
-                                        <form action="admin_delete_booking.php" method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this booking?');">
-                                            <input type="hidden" name="history_id" value="<?php echo htmlspecialchars($booking['history_id']); ?>">
+                                        <form method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this booking?');">
+                                            <input type="hidden" name="delete_status_id" value="<?php echo htmlspecialchars($booking['status_id']); ?>">
                                             <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                                         </form>
                                     </td>

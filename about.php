@@ -17,7 +17,7 @@ $loggedIn = isset($_SESSION['book_id']);
 $username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest';
 
 // Get the user's role from the session. Defaults to 'Guest' if not set.
-// CORRECTED: Reading 'user_role' which is set by login_page.php
+// The role is set in login_page.php and is confirmed to exist in the BookUser table in setup.php.
 $user_role = $loggedIn && isset($_SESSION['book_user_roles']) ? $_SESSION['book_user_roles'] : 'Guest';
 
 // Define the default profile picture path.
@@ -35,7 +35,6 @@ if ($user_role === 'Admin') {
 } elseif ($user_role === 'Staff') {
     $siteTitle = 'SierraFlight (Staff)';
 }
-
 ?>
 
 <!DOCTYPE html>
@@ -111,7 +110,7 @@ if ($user_role === 'Admin') {
         }
 
         .top-gradient-bar .user-info a:hover {
-             text-decoration: underline;
+            text-decoration: underline;
         }
 
         .top-gradient-bar .profile-picture-nav,
@@ -122,25 +121,27 @@ if ($user_role === 'Admin') {
             margin-left: 8px;
             vertical-align: middle;
             object-fit: cover;
-             border: 1px solid white;
+            border: 1px solid white;
         }
-         .top-gradient-bar .profile-icon-nav {
-              border: none;
-         }
 
-         .top-gradient-bar .btn-danger {
-             background-color: #dc3545;
-             border-color: #dc3545;
-             padding: .3rem .6rem;
-             font-size: .95rem;
-             line-height: 1.5;
-             border-radius: .2rem;
-             margin-left: 10px;
-         }
-         .top-gradient-bar .btn-danger:hover {
-             background-color: #c82333;
-             border-color: #bd2130;
-         }
+        .top-gradient-bar .profile-icon-nav {
+            border: none;
+        }
+
+        .top-gradient-bar .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+            padding: .3rem .6rem;
+            font-size: .95rem;
+            line-height: 1.5;
+            border-radius: .2rem;
+            margin-left: 10px;
+        }
+
+        .top-gradient-bar .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
 
         .navbar {
             background-color: #212529;
@@ -152,12 +153,12 @@ if ($user_role === 'Admin') {
         }
 
         .navbar > .container {
-             display: flex;
-             align-items: center;
-             width: 100%;
-             max-width: 1140px;
-             margin: 0 auto;
-             padding: 0;
+            display: flex;
+            align-items: center;
+            width: 100%;
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0;
         }
 
         .navbar-brand,
@@ -166,31 +167,34 @@ if ($user_role === 'Admin') {
         }
 
         @media (max-width: 991.98px) {
-             .navbar-toggler {
-                 display: block;
-                 padding: .25rem .75rem;
-                 font-size: 1.25rem;
-                 line-height: 1;
-                 background-color: transparent;
-                 border: 1px solid rgba(255, 255, 255, .1);
-                 border-radius: .25rem;
-             }
-              .navbar-collapse {
-                  background-color: #212529;
-                  padding: 10px;
-              }
-              .navbar > .container {
-                   justify-content: space-between;
-              }
-               .navbar-collapse {
-                    flex-grow: 1;
-               }
+            .navbar-toggler {
+                display: block;
+                padding: .25rem .75rem;
+                font-size: 1.25rem;
+                line-height: 1;
+                background-color: transparent;
+                border: 1px solid rgba(255, 255, 255, .1);
+                border-radius: .25rem;
+            }
+
+            .navbar-collapse {
+                background-color: #212529;
+                padding: 10px;
+            }
+
+            .navbar > .container {
+                justify-content: space-between;
+            }
+
+            .navbar-collapse {
+                flex-grow: 1;
+            }
         }
 
         .navbar-nav .nav-link {
-             padding: 8px 15px;
-             color: white !important;
-             transition: background-color 0.3s ease, text-decoration 0.3s ease;
+            padding: 8px 15px;
+            color: white !important;
+            transition: background-color 0.3s ease, text-decoration 0.3s ease;
         }
 
         .navbar-nav .nav-link:hover {
@@ -200,112 +204,113 @@ if ($user_role === 'Admin') {
         }
 
         .navbar-nav .nav-link:active {
-             background-color: rgba(255, 255, 255, 0.2);
-        }
-
-        .navbar-nav .nav-item.active .nav-link {
-            font-weight: bold;
-            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.2);
         }
 
         .page-content {
-             padding: 20px;
-             flex-grow: 1;
+            padding: 20px;
+            flex-grow: 1;
         }
 
         .about-container {
-            margin: 30px auto;
             max-width: 800px;
-            padding: 30px;
+            margin: 30px auto;
             background-color: #282b3c;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-             color: #e0e0e0;
+            padding: 30px;
+            color: #e0e0e0;
         }
 
         .about-header {
             text-align: center;
             margin-bottom: 30px;
             color: white;
-             font-size: 2rem;
+            font-size: 2rem;
         }
 
-        .about-content p {
+        .about-content {
+            font-size: 1.1rem;
             line-height: 1.6;
-            margin-bottom: 15px;
-            color: #ccc;
         }
 
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
+        .about-content h3 {
+            color: #ffb03a;
+            margin-top: 20px;
         }
-        .alert-danger {
-             color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-         .alert-warning {
-             color: #856404;
-             background-color: #fff3cd;
-             border-color: #ffeeba;
-         }
-          .alert-info {
-              color: #0c5460;
-              background-color: #d1ecf1;
-              border-color: #bee5eb;
-          }
-
     </style>
 </head>
 <body>
-
     <div class="top-gradient-bar">
-        <div class="container">
-            <a href="index.php" class="site-title"><?php echo $siteTitle; ?></a>
+        <div class="container"> <a href="index.php" class="site-title"><?php echo htmlspecialchars($siteTitle); ?></a>
             <div class="user-info">
-                <?php if ($loggedIn): // Check if user is logged in ?>
-                     <a href="profile_page.php">
-                         Profile
-                         <?php if ($profilePictureUrl === $defaultProfilePicture): // Check if using default profile picture ?>
-                             <i class="fas fa-user-circle fa-lg profile-icon-nav"></i> <?php else: ?>
-                             <img src="<?php echo htmlspecialchars($profilePictureUrl); ?>" alt="Profile Picture" class="profile-picture-nav"> <?php endif; ?>
-                     </a>
-                     <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
-                <?php else: // If not logged in ?>
-                    <a href="login_page.php" class="nav-link">Login/Sign Up</a>
+                <?php if ($loggedIn): ?>
+                <a href="profile_page.php">
+                    Profile
+                    <?php if ($profilePictureUrl === $defaultProfilePicture): ?>
+                    <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
+                    <?php else: ?>
+                    <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
+                    <?php endif; ?>
+                </a>
+                <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
+                <?php else: ?>
+                <a href="login_page.php" class="nav-link">Login/Sign Up</a>
                 <?php endif; ?>
             </div>
         </div>
     </div>
 
     <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container"> <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
-                    </li>
-                    <li class="nav-item active"> <a class="nav-link" href="about.php">About</a>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="homepage.php">Home <span class="sr-only">(current)</span></a>
                     </li>
                     <li class="nav-item">
-                         <?php if ($loggedIn): // Show Book a Flight only if logged in ?>
-                             <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
-                         <?php else: // Otherwise, link to login page ?>
-                             <a class="nav-link" href="login_page.php">Book a Flight</a>
-                         <?php endif; ?>
+                        <a class="nav-link" href="about.php">About</a>
                     </li>
-                     <?php if ($loggedIn): // Show Profile and Check Book only if logged in ?>
-                     <li class="nav-item">
-                         <a class="nav-link" href="profile_page.php">Profile</a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="booking_history.php">Check Book</a>
-                     </li>
-                     <?php endif; ?>
+                    <?php if ($loggedIn): ?>
+                        <?php if ($user_role === 'Admin'): ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="add_flight.php">Add Flight</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="flight_list.php">Flight List</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="booking_list.php">Booking List</a>
+                            </li>
+                        <?php elseif ($user_role === 'Staff'): ?>
+                            <li class="nav-item">
+                                <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="user_feedback.php">User Feedback</a>
+                            </li>
+                        <?php elseif($user_role === 'Customer'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="booking_history.php">Check Book</a>
+                        </li>
+                        <?php endif; ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="profile_page.php">Profile</a>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -313,14 +318,42 @@ if ($user_role === 'Admin') {
 
     <div class="container page-content">
         <div class="about-container">
-            <h2 class="about-header">About Our Flight Booking System</h2>
-            <div class="about-content">
-                <p>Welcome to our flight booking system! We aim to provide a simple and efficient way for you to find and book flights to various destinations.</p>
-                <p>Our system allows you to search for flights based on origin, destination, dates, and class. Once you find the perfect flight, you can proceed with a straightforward booking process.</p>
-                <p>For registered users, we offer personalized features such as a profile page to manage your information and a history of your past bookings.</p>
-                <p>This project was developed as part of a college project, focusing on building a functional web application with user authentication, database interaction, and basic flight booking capabilities.</p>
-                <p>We are continuously working to improve the system and add more features. Thank you for using our flight booking system!</p>
-            </div>
+            <?php if ($user_role === 'Admin'): ?>
+                <h2 class="about-header">About Our System (Admin View)</h2>
+                <div class="about-content">
+                    <p>Welcome, Admin! This section provides an overview of your responsibilities and the system's administrative features.</p>
+                    <h3>Admin Responsibilities:</h3>
+                    <ul>
+                        <li>Manage user accounts and permissions.</li>
+                        <li>Monitor site performance and user activity.</li>
+                        <li>Handle critical booking issues and data management.</li>
+                        <li>Access comprehensive analytics and reports.</li>
+                    </ul>
+                    <p>Your role is essential for ensuring the smooth and secure operation of the flight booking system. Thank you for your hard work!</p>
+                </div>
+            <?php elseif ($user_role === 'Staff'): ?>
+                <h2 class="about-header">About Our System (Staff View)</h2>
+                <div class="about-content">
+                    <p>Welcome, Staff! This page outlines your role within the SierraFlight team and the tools available to you.</p>
+                    <h3>Staff Responsibilities:</h3>
+                    <ul>
+                        <li>Process and confirm flight bookings.</li>
+                        <li>Assist customers with booking inquiries and issues.</li>
+                        <li>Update booking statuses and customer details.</li>
+                        <li>Maintain accurate flight information.</li>
+                    </ul>
+                    <p>Your efforts directly contribute to a positive customer experience. Thank you for your dedication!</p>
+                </div>
+            <?php else: // This handles 'Customer' and 'Guest' roles ?>
+                <h2 class="about-header">About Our Flight Booking System</h2>
+                <div class="about-content">
+                    <p>Welcome to our flight booking system! We aim to provide a simple and efficient way for you to find and book flights to various destinations.</p>
+                    <p>Our system allows you to search for flights based on origin, destination, dates, and class. Once you find the perfect flight, you can proceed with a straightforward booking process.</p>
+                    <p>For registered users, we offer personalized features such as a profile page to manage your information and a history of your past bookings.</p>
+                    <p>This project was developed as part of a college project, focusing on building a functional web application with user authentication, database interaction, and basic flight booking capabilities.</p>
+                    <p>We are continuously working to improve the system and add more features. Thank you for using our flight booking system!</p>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
