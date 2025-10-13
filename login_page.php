@@ -294,13 +294,21 @@ if ($user_role === 'Admin') {
         .sign-up-link a:hover {
             text-decoration: underline;
         }
+        .header-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
 
     <div class="header-bar">
         <div class="container">
-            <a href="index.php" class="site-title"><?php echo $siteTitle; ?></a>
+            <a href="index.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                     <a href="profile_page.php">

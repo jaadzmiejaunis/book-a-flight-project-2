@@ -9,29 +9,43 @@ $loggedIn = isset($_SESSION['book_id']);
 $user_role = 'Guest';
 $username = 'Guest';
 $profilePictureUrl = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
+$five_star_reviews = []; // Initialize array for reviews
 
 // If a user is logged in, get their details from the database
 if ($loggedIn) {
     $user_id = $_SESSION['book_id'];
-
-    // Fetch user details from the database using a prepared statement for security
     $sql = "SELECT book_username, book_user_roles, book_profile FROM BookUser WHERE book_id = ?";
-    $stmt = mysqli_prepare($connection, $sql);
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-
-    if ($user = mysqli_fetch_assoc($result)) {
-        $username = htmlspecialchars($user['book_username']);
-        $user_role = $user['book_user_roles'];
-        if (!empty($user['book_profile'])) {
-            $profilePictureUrl = htmlspecialchars($user['book_profile']);
+    if ($stmt = mysqli_prepare($connection, $sql)) {
+        mysqli_stmt_bind_param($stmt, "i", $user_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        if ($user = mysqli_fetch_assoc($result)) {
+            $username = htmlspecialchars($user['book_username']);
+            $user_role = $user['book_user_roles'];
+            if (!empty($user['book_profile'])) {
+                $profilePictureUrl = htmlspecialchars($user['book_profile']);
+            }
+            $_SESSION['book_user_roles'] = $user_role;
         }
-        // ADDED: Set the user role in the session for other pages to access
-        $_SESSION['book_user_roles'] = $user_role;
+        mysqli_stmt_close($stmt);
     }
-    mysqli_stmt_close($stmt);
 }
+
+// --- Fetch 5-Star Reviews for Carousel (only for Customer/Guest view) ---
+if ($user_role === 'Customer' || $user_role === 'Guest') {
+    $review_sql = "SELECT r.comment, u.book_username 
+                   FROM BookReviews r
+                   JOIN BookUser u ON r.user_id = u.book_id
+                   WHERE r.rating = 5 AND r.comment IS NOT NULL AND r.comment != ''
+                   ORDER BY r.review_date DESC
+                   LIMIT 5";
+    if ($review_result = mysqli_query($connection, $review_sql)) {
+        while ($row = mysqli_fetch_assoc($review_result)) {
+            $five_star_reviews[] = $row;
+        }
+    }
+}
+
 mysqli_close($connection); // Close the database connection
 
 // Define functions to generate common HTML sections
@@ -82,10 +96,10 @@ function get_html_head($title) {
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
-        .top-gradient-bar .site-title:hover {
-            text-decoration: underline;
-        }
+        .top-gradient-bar .site-title:hover { text-decoration: underline; }
         .top-gradient-bar .user-info {
             display: flex;
             align-items: center;
@@ -100,79 +114,17 @@ function get_html_head($title) {
             display: flex;
             align-items: center;
         }
-        .top-gradient-bar .user-info a:hover {
-            text-decoration: underline;
-        }
-        .top-gradient-bar .profile-picture-nav,
-        .top-gradient-bar .profile-icon-nav {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            margin-left: 8px;
-            vertical-align: middle;
-            object-fit: cover;
-            border: 1px solid white;
-        }
-        .top-gradient-bar .profile-icon-nav {
-            border: none;
+        .top-gradient-bar .profile-picture-nav {
+            width: 36px; height: 36px; border-radius: 50%; margin-left: 8px;
+            vertical-align: middle; object-fit: cover; border: 1px solid white;
         }
         .top-gradient-bar .btn-danger {
-            background-color: #dc3545;
-            border-color: #dc3545;
-            padding: .3rem .6rem;
-            font-size: .95rem;
-            line-height: 1.5;
-            border-radius: .2rem;
-            margin-left: 10px;
+            background-color: #dc3545; border-color: #dc3545; padding: .3rem .6rem;
+            font-size: .95rem; line-height: 1.5; border-radius: .2rem; margin-left: 10px;
         }
-        .top-gradient-bar .btn-danger:hover {
-            background-color: #c82333;
-            border-color: #bd2130;
-        }
-        .navbar {
-            background-color: #212529;
-            padding: 0 20px;
-            margin-bottom: 0;
-            background-image: none;
-            box-shadow: none;
-            min-height: auto;
-        }
-        .navbar > .container {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            max-width: 1140px;
-            margin: 0 auto;
-            padding: 0;
-        }
-        .navbar-brand,
-        .navbar-toggler {
-            display: none;
-        }
-        @media (max-width: 991.98px) {
-            .navbar-toggler {
-                display: block;
-                padding: .25rem .75rem;
-                font-size: 1.25rem;
-                line-height: 1;
-                background-color: transparent;
-                border: 1px solid rgba(255, 255, 255, .1);
-                border-radius: .25rem;
-            }
-            .navbar-collapse {
-                background-color: #212529;
-                padding: 10px;
-            }
-            .navbar > .container {
-                justify-content: space-between;
-            }
-            .navbar-collapse {
-                flex-grow: 1;
-            }
-        }
+        .navbar { background-color: #212529; padding: 0 20px; margin-bottom: 0; }
         .navbar-nav .nav-link {
-            padding: 8px 15px;
-            color: white !important;
+            padding: 8px 15px; color: white !important;
             transition: background-color 0.3s ease, text-decoration 0.3s ease;
         }
         .navbar-nav .nav-link:hover {
@@ -180,132 +132,178 @@ function get_html_head($title) {
             text-decoration: underline;
             color: white !important;
         }
-        .navbar-nav .nav-link:active {
-            background-color: rgba(255, 255, 255, 0.2);
+        .page-content {
+            display: flex; align-items: center; justify-content: center;
+            flex-grow: 1; padding: 2rem 0; /* Changed padding */
         }
         .jumbotron {
-            background-color: #282b3c;
-            color: #e0e0e0;
-            text-align: center;
-            padding: 100px 0;
-            margin-bottom: 0;
-            background-image: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
+            background-color: transparent; color: #e0e0e0; text-align: center;
+            padding-top: 5rem; padding-bottom: 5rem;
+        }
+        .jumbotron h1 { font-size: 3.5rem; margin-bottom: 20px; color: white; font-weight: 300; }
+        .jumbotron p.lead { font-size: 1.5rem; margin-bottom: 30px; }
+        .btn-primary, .btn-secondary {
+            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
+            border: none; color: white !important; padding: 12px 30px; font-size: 1.2rem;
+            border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.5s ease; background-size: 200% auto; text-decoration: none;
+        }
+        .btn-primary:hover, .btn-secondary:hover { background-position: right center; text-decoration: none; }
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px; height: auto; margin-right: 10px; vertical-align: middle;
+        }
+        .staff-welcome-banner {
+            background-color: #232635; border-radius: 15px; padding: 0;
+            overflow: hidden; display: flex; align-items: center;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+        }
+        .staff-welcome-banner .text-content { padding: 2rem 3rem; text-align: left; }
+        .staff-welcome-banner .image-content img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        @media (max-width: 991.98px) {
+            .staff-welcome-banner { flex-direction: column; text-align: center; }
+            .staff-welcome-banner .text-content { text-align: center; }
+        }
+
+        /* Review Carousel Section */
+        .review-carousel-section {
+            background-color: #212529;
+            padding: 4rem 0;
             width: 100%;
         }
-        .jumbotron .container {
-            flex-grow: 0;
-        }
-        .jumbotron h1 {
-            font-size: 3.5rem;
-            margin-bottom: 20px;
+        .review-carousel-section h2 {
+            text-align: center;
             color: white;
+            margin-bottom: 2rem;
+            font-weight: 300;
         }
-        .jumbotron p.lead {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-        }
-        .jumbotron .btn-primary {
-            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            font-size: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            transition: background-position 0.5s ease;
-            background-size: 200% auto;
-        }
-        .jumbotron .btn-primary:hover {
-            background-position: right center;
-        }
-        .jumbotron .btn-secondary {
-            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
-            border: none;
-            color: white;
-            padding: 12px 30px;
-            font-size: 1.5rem;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            transition: background-position 0.5s ease;
-            background-size: 200% auto;
-            margin-top: 15px;
-        }
-        .jumbotron .btn-secondary:hover {
-            background-position: right center;
-            color: white;
-            text-decoration: none;
-        }
-        .jumbotron .btn-secondary:focus {
-            box-shadow: 0 0 0 0.2rem rgba(255, 176, 58, 0.5);
-            outline: none;
-        }
-        .alert {
-            margin-top: 15px;
-            padding: 10px 15px;
-            border-radius: 5px;
-        }
-        .alert-success {
-            color: #155724;
-            background-color: #d4edda;
-            border-color: #c3e6cb;
-        }
-        .alert-danger {
-            color: #721c24;
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-        }
-        .alert-warning {
-            color: #856404;
-            background-color: #fff3cd;
-            border-color: #ffeeba;
-        }
-        .alert-info {
-            color: #0c5460;
-            background-color: #d1ecf1;
-            border-color: #bee5eb;
-        }
-        .firstRow {
-            background-color: #232635ff;
-            display: flex;
-            align-items: center; /* This centers the columns vertically */
-            padding: 20px;
-            border-radius: 8px;
-        }
-        .firstColumn {
-            display: flex;
-            flex-direction: column;
-            justify-content: center; /* This centers the text vertically */
-            align-items: center; /* This centers the text horizontally */
-            height: 100%;
+        #reviewCarousel .carousel-item {
+            padding: 2rem 5rem;
             text-align: center;
         }
-        .imageStaff img {
-            max-width: 100%;
-            height: 100%; /* Make the image fill the height of its container */
-            object-fit: cover; /* This crops the image to fill the container without stretching */
-            border-radius: 8px;
+        #reviewCarousel .rating-stars {
+            color: #ffc107;
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
         }
+        #reviewCarousel blockquote {
+            font-size: 1.25rem;
+            font-style: italic;
+            color: #e0e0e0;
+        }
+        #reviewCarousel .blockquote-footer {
+            margin-top: 1rem;
+            color: #ffb03a;
+            font-size: 1rem;
+            font-style: normal;
+        }
+        #reviewCarousel .carousel-indicators li {
+            background-color: #ffb03a;
+        }
+
+        .site-footer {
+            background-color: #212529;
+            color: #a0a0a0; padding: 4rem 0; border-top: none;
+        }
+        .site-footer h6 { color: #ffffff; font-weight: bold; margin-bottom: 1.5rem; }
+        .site-footer a { color: #a0a0a0; text-decoration: none; }
+        .site-footer a:hover { color: #ffb03a; text-decoration: underline; }
+        .site-footer .list-unstyled li { margin-bottom: 0.75rem; }
+        .social-icons a {
+            display: inline-flex; justify-content: center; align-items: center;
+            width: 36px; height: 36px; border-radius: 50%; background-color: #3a3e52;
+            color: #e0e0e0; margin: 0 5px 5px 0; transition: background-color 0.3s;
+        }
+        .social-icons a:hover { background-color: #ffb03a; color: #1e1e2d; text-decoration: none; }
+        .back-to-top {
+            position: fixed; bottom: 25px; right: 25px;
+            display: inline-flex; justify-content: center; align-items: center;
+            width: 50px; height: 50px; border-radius: 50%; background-color: #EA2264;
+            color: #fff; text-decoration: none; box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            transition: opacity 0.3s, visibility 0.3s; z-index: 1000; opacity: 0; visibility: hidden;
+        }
+        .back-to-top.show { opacity: 1; visibility: visible; }
     </style>
 </head>
 <body>
 HTML;
 }
 
-function get_html_bottom() {
+function get_html_footer($loggedIn, $user_role) {
+    $account_links = '';
+    if ($loggedIn) {
+        $account_links = '<li><a href="profile_page.php">My Profile</a></li>';
+        if ($user_role === 'Customer') {
+            $account_links .= '<li><a href="booking_history.php">Booking History</a></li>';
+        }
+    } else {
+        $account_links = '<li><a href="login_page.php">Sign In / Register</a></li>
+                          <li><a href="forgot_password.php">Forgot Password</a></li>';
+    }
+    $sierraflight_links = '<li><a href="homepage.php">Home</a></li><li><a href="about.php">About Us</a></li>';
+    $role_specific_column = '';
+    if ($user_role === 'Staff' || $user_role === 'Admin') {
+        $panel_name = ($user_role === 'Staff') ? 'Staff Panel' : 'Admin Panel';
+        $panel_links = '';
+        if ($user_role === 'Staff') {
+            $panel_links = '<li><a href="staff_sales_report.php">Sales Report</a></li>
+                            <li><a href="staff_booking_status.php">View Booking Status</a></li>
+                            <li><a href="staff_user_feedback.php">User Feedback</a></li>';
+        } else {
+            $panel_links = '<li><a href="admin_flight_list.php">Flight List</a></li>
+                            <li><a href="admin_booking_list.php">Booking List</a></li>';
+        }
+        $role_specific_column = "<div class='col-lg-3 col-md-6 mb-4'><h6>{$panel_name}</h6><ul class='list-unstyled'>{$panel_links}</ul></div>";
+    } else {
+        $sierraflight_links .= '<li><a href="book_a_flight.php">Book a Flight</a></li>';
+        $role_specific_column = '<div class="col-lg-3 col-md-6 mb-4"><h6>Support</h6><ul class="list-unstyled"><li><a href="#">Help Center</a></li></ul></div>';
+    }
     return <<<HTML
-    <footer>
+    <footer class="site-footer">
         <div class="container">
-            <p>Copyright &copy; 2025 SierraFlight. All Rights Reserved.</p>
+            <div class="row justify-content-center">
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h6>SierraFlight</h6><ul class="list-unstyled">{$sierraflight_links}</ul>
+                </div>
+                {$role_specific_column}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h6>Account</h6><ul class="list-unstyled">{$account_links}</ul>
+                </div>
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <h6>Follow Us</h6>
+                    <div class="social-icons">
+                        <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+                        <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+                        <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+                    </div>
+                </div>
+            </div>
         </div>
     </footer>
+    <a href="#" class="back-to-top" title="Back to Top"><i class="fas fa-arrow-up"></i></a>
+HTML;
+}
+
+function get_html_bottom() {
+    return <<<HTML
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const backToTopButton = document.querySelector('.back-to-top');
+            if (backToTopButton) {
+                window.addEventListener('scroll', () => {
+                    if (window.scrollY > 300) { backToTopButton.classList.add('show'); } 
+                    else { backToTopButton.classList.remove('show'); }
+                });
+                backToTopButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+            }
+        });
+    </script>
 </body>
 </html>
 HTML;
@@ -314,191 +312,115 @@ HTML;
 // Check user role and display appropriate content
 switch ($user_role) {
     case 'Admin':
-        // Admin Homepage
-        echo get_html_head('Admin Homepage - SierraFlight.com');
-
-        $profile_image_html = '<img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav">';
-
-        echo <<<HTML
-        <div class="top-gradient-bar">
-            <div class="container">
-                <a href="index.php" class="site-title">SierraFlight (Admin)</a>
-                <div class="user-info">
-                    <span>Welcome, {$username}!</span>
-                    <a href="profile_page.php">{$profile_image_html}</a>
-                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
-                </div>
-            </div>
-        </div>
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container">
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mr-auto">
-                        <li class="nav-item active"> <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="about.php">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_flight_list.php">Add Flight</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_flight_list.php">Flight List</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_booking_list.php">Booking List</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        <div class="jumbotron">
-            <div class="container">
-                <h1 class="display-4">Welcome, {$username}!</h1> <p class="lead">Admin Panel Homepage.</p>
-                <p><a class="btn btn-primary btn-lg" href="edit_book_flight.php" role="button">Add New Flight</a></p>
-                <p><a class="btn btn-secondary btn-lg" href="admin_flight_list.php" role="button">View Flight List</a></p>
-                <p><a class="btn btn-secondary btn-lg" href="admin_booking_list.php" role="button">View Booking List</a></p>
-            </div>
-        </div>
-HTML;
-        echo get_html_bottom();
-        break;
-
     case 'Staff':
-        // Staff Homepage
-        echo get_html_head('Staff Homepage - SierraFlight');
-
+        $role_title = ($user_role === 'Admin') ? 'Admin' : 'Staff';
+        echo get_html_head("{$role_title} Homepage - SierraFlight");
         $profile_image_html = '<img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav">';
-
+        $nav_links = ($user_role === 'Admin') ? '
+                <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin_flight_list.php">Flight List</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin_booking_list.php">Booking List</a></li>
+                <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>'
+            : '
+                <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="staff_sales_report.php">Sales Report</a></li>
+                <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">View Booking Status</a></li>
+                <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
+                <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
         echo <<<HTML
         <div class="top-gradient-bar">
             <div class="container">
-                <a href="index.php" class="site-title">SierraFlight (Staff)</a>
+                <a href="index.php" class="site-title"><img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo"><span>({$role_title})</span></a>
                 <div class="user-info">
-                    <span>Welcome, {$username}!</span>
-                    <a href="profile_page.php">{$profile_image_html}</a>
-                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
+                    <span>Welcome, {$username}!</span><a href="profile_page.php">{$profile_image_html}</a><a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 </div>
             </div>
         </div>
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container">
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mr-auto">
-                        <li class="nav-item active"> <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="about.php">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        <div>
-            <div class="container">
-                <div class = "firstRow row">
-                    <div class = "col firstColumn">
-                        <h1 class="display-4">Welcome, {$username}!</h1> <p class="lead">Staff Panel Homepage</p>
-                    </div>
-                    <div class = "imageStaff col">
-                        <img src = "image_website\website_image\stock_image_staff.jpg">
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="jumbotron">
-            <div class="container">
-                
-            </div>
-        </div>
+        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
+            <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>{$nav_links}
+        </ul></div></div></nav>
+        <div class="page-content"><div class="container"><div class="row staff-welcome-banner">
+            <div class="col-lg-6 text-content"><h1 class="display-4">Welcome, {$username}!</h1><p class="lead">{$role_title} Panel Homepage</p></div>
+            <div class="col-lg-6 p-0 image-content"><img src="image_website/website_image/sierraflight_staff_page.png" alt="Airport lounge view"></div>
+        </div></div></div>
 HTML;
+        echo get_html_footer($loggedIn, $user_role);
         echo get_html_bottom();
         break;
 
     case 'Customer':
     default:
-        // Customer or Guest Homepage
         $title = $loggedIn ? 'Flight Booking' : 'SierraFlight Home';
         echo get_html_head($title);
-
-        $profile_image_html = '';
-        if ($loggedIn) {
-            $profile_image_html = '<img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav">';
-        } else {
-            $profile_image_html = '<i class="fas fa-user-circle fa-lg profile-icon-nav"></i>';
-        }
-
+        $user_actions_html = $loggedIn ?
+            '<span>Welcome, ' . $username . '!</span><a href="profile_page.php"><img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav"></a><a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>'
+            : '<a href="login_page.php" class="nav-link">Login/Sign Up</a>';
         echo <<<HTML
         <div class="top-gradient-bar">
             <div class="container">
-                <a href="index.php" class="site-title">SierraFlight</a>
-                <div class="user-info">
-                    <span>Welcome, {$username}!</span>
-                    <a href="profile_page.php">{$profile_image_html}</a>
-                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
-                </div>
+                <a href="index.php" class="site-title"><img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo"></a>
+                <div class="user-info">{$user_actions_html}</div>
             </div>
         </div>
-        <nav class="navbar navbar-expand-lg navbar-dark">
-            <div class="container">
-                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav mr-auto">
-                        <li class="nav-item active"> <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="about.php">About</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
-                        </li>
-                         <?php if ($loggedIn): ?>
-                         <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                         </li>
-                         <li class="nav-item">
-                            <a class="nav-link" href="booking_history.php">Check Book</a>
-                         </li>
-                         <?php endif; ?>
-                    </ul>
-                </div>
-            </div>
-        </nav>
-        <div class="jumbotron">
-            <div class="container">
-                <h1 class="display-4">Welcome, {$username}!</h1>
-                <p class="lead">Find and book your next flight with ease.</p>
-                <p>
-                    <a class="btn btn-primary btn-lg" href="book_a_flight.php" role="button">Book a Flight Now</a>
-                </p>
-            </div>
-        </div>
+        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
+            <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>
+            <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+            <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
 HTML;
+        if ($loggedIn) {
+            echo '<li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
+                  <li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>';
+        }
+        echo '</ul></div></div></nav>';
+        
+        // Main Jumbotron for Customers
+        echo '<main class="page-content"><div class="jumbotron"><div class="container">
+                <h1 class="display-4">Welcome to SierraFlight!</h1>
+                <p class="lead">Find and book your next flight with ease.</p>
+                <p><a class="btn btn-primary btn-lg" href="book_a_flight.php" role="button">Book a Flight Now</a></p>
+              </div></div></main>';
+
+        // Display the review carousel only if there are reviews
+        if (!empty($five_star_reviews)) {
+            echo '<div class="review-carousel-section">
+                    <div class="container">
+                        <h2>What Our Customers Say</h2>
+                        <div id="reviewCarousel" class="carousel slide" data-ride="carousel" data-interval="5000">
+                            <ol class="carousel-indicators">';
+            foreach ($five_star_reviews as $index => $review) {
+                $active_class = ($index == 0) ? 'class="active"' : '';
+                echo "<li data-target='#reviewCarousel' data-slide-to='{$index}' {$active_class}></li>";
+            }
+            echo '      </ol>
+                        <div class="carousel-inner">';
+            foreach ($five_star_reviews as $index => $review) {
+                $active_class = ($index == 0) ? 'active' : '';
+                echo "<div class='carousel-item {$active_class}'>
+                        <div class='rating-stars'>
+                            <i class='fas fa-star'></i><i class='fas fa-star'></i><i class='fas fa-star'></i><i class='fas fa-star'></i><i class='fas fa-star'></i>
+                        </div>
+                        <blockquote>
+                            <p class='mb-0'>\"" . htmlspecialchars($review['comment']) . "\"</p>
+                            <footer class='blockquote-footer'>- " . htmlspecialchars($review['book_username']) . "</footer>
+                        </blockquote>
+                      </div>";
+            }
+            echo '      </div>
+                        <a class="carousel-control-prev" href="#reviewCarousel" role="button" data-slide="prev">
+                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Previous</span>
+                        </a>
+                        <a class="carousel-control-next" href="#reviewCarousel" role="button" data-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Next</span>
+                        </a>
+                    </div>
+                </div>
+            </div>';
+        }
+
+        echo get_html_footer($loggedIn, $user_role);
         echo get_html_bottom();
         break;
 }
-
 ?>

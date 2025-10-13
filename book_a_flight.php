@@ -12,7 +12,7 @@ if (!$connection) {
 
 $loggedIn = isset($_SESSION['book_id']);
 $username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest';
-$defaultProfilePicture = 'path/to/default-profile-picture.png';
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
 $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
 
 $search_from = trim($_GET['from_location'] ?? '');
@@ -76,9 +76,18 @@ mysqli_close($connection);
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
+        }
+
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         .top-gradient-bar .user-info {
@@ -500,12 +509,15 @@ mysqli_close($connection);
 
 <body>
     <div class="top-gradient-bar">
-        <div class="container"> <a href="index.php" class="site-title">SierraFlight</a>
+        <div class="container">
+            <a href="index.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                     <a href="profile_page.php">
-                        Profile
-                        <?php if ($profilePictureUrl === $defaultProfilePicture): ?>
+                        <span>Welcome, <?php echo $username; ?>!</span>
+                        <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
                             <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
                         <?php else: ?>
                             <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
@@ -526,20 +538,20 @@ mysqli_close($connection);
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a>
+                        <a class="nav-link" href="index.php">Home</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="about.php">About</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="book_a_flight.php">Book a Flight <span class="sr-only">(current)</span></a>
                     </li>
                     <?php if ($loggedIn): ?>
                     <li class="nav-item">
                         <a class="nav-link" href="profile_page.php">Profile</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="booking_history.php">Check Book</a>
+                        <a class="nav-link" href="booking_history.php">Book History</a>
                     </li>
                     <?php endif; ?>
                 </ul>

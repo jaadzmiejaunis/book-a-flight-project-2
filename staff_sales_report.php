@@ -215,9 +215,17 @@ mysqli_close($connection);
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
+        }
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         .top-gradient-bar .user-info {
@@ -586,7 +594,10 @@ mysqli_close($connection);
 
     <div class="top-gradient-bar">
         <div class="container">
-            <a href="homepage.php" class="site-title">SierraFlight (Staff)</a>
+            <a href="homepage.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+                <span>(Staff)</span>
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                     <span>Welcome, <?php echo $username; ?>!</span>
@@ -616,14 +627,14 @@ mysqli_close($connection);
                     <li class="nav-item">
                         <a class="nav-link" href="about.php">About</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="staff_sales_report.php">Sales Report <span class="sr-only">(current)</span></a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
+                        <a class="nav-link" href="staff_user_feedback.php">User Feedback</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="profile_page.php">Profile</a>
@@ -635,7 +646,6 @@ mysqli_close($connection);
 
     <div class="container page-content">
         <div class="admin-container">
-            <!-- Print Header (only shows when printing) -->
             <div class="print-header">
                 <h1>SierraFlight - Sales Analytics Report</h1>
                 <div class="subtitle"><?php echo $month_name; ?> | Generated on: <?php echo date('F j, Y'); ?></div>
@@ -645,7 +655,6 @@ mysqli_close($connection);
                 Sales Analytics - <?php echo $month_name; ?>
             </div>
 
-            <!-- Month Navigation -->
             <div class="month-navigation">
                 <?php foreach ($available_months as $month): ?>
                     <?php
@@ -659,7 +668,6 @@ mysqli_close($connection);
                 <?php endforeach; ?>
             </div>
 
-            <!-- Page Actions -->
             <div class="page-actions">
                 <a href="staff_sales_report.php?month=<?php echo $selected_month; ?>" class="page-action-btn">
                     <i class="fas fa-chart-bar"></i> View Analytics
@@ -676,12 +684,10 @@ mysqli_close($connection);
             <?php endif; ?>
 
             <?php if ($total_bookings > 0): ?>
-                <!-- Print Button -->
                 <button onclick="window.print()" class="btn btn-primary print-button">
                     <i class="fas fa-print"></i> Print Analytics Report
                 </button>
 
-                <!-- Key Statistics -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-value"><?php echo $total_bookings; ?></div>
@@ -709,7 +715,6 @@ mysqli_close($connection);
                     </div>
                 </div>
 
-                <!-- Statistics Tables for Print -->
                 <div class="print-only" style="display: none;">
                     <div style="margin-bottom: 30px; page-break-inside: avoid;">
                         <h3 style="color: #000; border-bottom: 2px solid #000; padding-bottom: 5px;">Top Airlines Performance</h3>
@@ -756,7 +761,6 @@ mysqli_close($connection);
                     </div>
                 </div>
 
-                <!-- Charts -->
                 <div class="charts-container">
                     <div class="chart-card">
                         <div class="chart-title">Revenue by Airline</div>

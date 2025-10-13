@@ -162,7 +162,7 @@ $profilePictureUrl = $defaultProfilePicture;
         }
 
         .top-gradient-bar {
-            background-image: linear-gradient(to right, #3b2e8b, #ffb03a);
+            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
             padding: 10px 20px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             color: white;
@@ -341,7 +341,7 @@ $profilePictureUrl = $defaultProfilePicture;
          }
 
         .signup-container .btn-primary {
-             background-image: linear-gradient(to right, #ffb03a, #dd5b12, #3b2e8b);
+             background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
              border: none;
              color: white;
              padding: 10px 20px;
@@ -409,12 +409,21 @@ $profilePictureUrl = $defaultProfilePicture;
             line-height: 1;
             padding: 10px 12px;
         }
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
 
     <div class="top-gradient-bar">
-        <div class="container"> <a href="index.php" class="site-title">BookAFlight.com</a>
+        <div class="container">
+            <a href="index.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                      <a href="profile_page.php">

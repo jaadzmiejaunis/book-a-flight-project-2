@@ -232,9 +232,17 @@ unset($_SESSION['message_type']);
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
+        }
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         .top-gradient-bar .user-info {
@@ -456,7 +464,10 @@ unset($_SESSION['message_type']);
 
     <div class="top-gradient-bar">
         <div class="container">
-            <a href="homepage.php" class="site-title">SierraFlight (Staff)</a>
+            <a href="homepage.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+                <span>(Staff)</span>
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                     <span>Welcome, <?php echo $username; ?>!</span>
@@ -489,11 +500,11 @@ unset($_SESSION['message_type']);
                     <li class="nav-item">
                         <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="staff_booking_status.php">View Booking Status <span class="sr-only">(current)</span></a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
+                        <a class="nav-link" href="staff_user_feedback.php">User Feedback</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="profile_page.php">Profile</a>

@@ -21,7 +21,7 @@ $username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSI
 $user_role = $loggedIn && isset($_SESSION['book_user_roles']) ? $_SESSION['book_user_roles'] : 'Guest';
 
 // Define the default profile picture path.
-$defaultProfilePicture = 'path/to/default-profile-picture.png'; // <<<--- UPDATE THIS PATH
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png'; 
 
 // Get the profile picture URL from the session if logged in and available,
 // otherwise use the default profile picture path.
@@ -42,7 +42,7 @@ if ($user_role === 'Admin') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - BookAFlight.com</title>
+    <title>About Us - SierraFlight</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -87,10 +87,19 @@ if ($user_role === 'Admin') {
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex; /* Added for vertical alignment */
+            align-items: center; /* Added for vertical alignment */
         }
 
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
+        }
+        
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         .top-gradient-bar .user-info {
@@ -242,12 +251,20 @@ if ($user_role === 'Admin') {
 </head>
 <body>
     <div class="top-gradient-bar">
-        <div class="container"> <a href="index.php" class="site-title"><?php echo htmlspecialchars($siteTitle); ?></a>
+        <div class="container">
+            <a href="index.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+                <?php if ($user_role === 'Admin'): ?>
+                    <span>(Admin)</span>
+                <?php elseif ($user_role === 'Staff'): ?>
+                    <span>(Staff)</span>
+                <?php endif; ?>
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                 <a href="profile_page.php">
-                    Profile
-                    <?php if ($profilePictureUrl === $defaultProfilePicture): ?>
+                    <span>Welcome, <?php echo $username; ?>!</span>
+                    <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
                     <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
                     <?php else: ?>
                     <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
@@ -268,22 +285,22 @@ if ($user_role === 'Admin') {
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item active">
-                        <a class="nav-link" href="homepage.php">Home <span class="sr-only">(current)</span></a>
-                    </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="about.php">About</a>
+                        <a class="nav-link" href="homepage.php">Home</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="about.php">About <span class="sr-only">(current)</span></a>
                     </li>
                     <?php if ($loggedIn): ?>
                         <?php if ($user_role === 'Admin'): ?>
                             <li class="nav-item">
-                                <a class="nav-link" href="add_flight.php">Add Flight</a>
+                                <a class="nav-link" href="admin_flight_list.php">Add Flight</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="flight_list.php">Flight List</a>
+                                <a class="nav-link" href="admin_flight_list.php">Flight List</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="booking_list.php">Booking List</a>
+                                <a class="nav-link" href="admin_booking_list.php">Booking List</a>
                             </li>
                         <?php elseif ($user_role === 'Staff'): ?>
                             <li class="nav-item">
@@ -293,14 +310,14 @@ if ($user_role === 'Admin') {
                                 <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link" href="user_feedback.php">User Feedback</a>
+                                <a class="nav-link" href="staff_user_feedback.php">User Feedback</a>
                             </li>
                         <?php elseif($user_role === 'Customer'): ?>
                         <li class="nav-item">
                             <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="booking_history.php">Check Book</a>
+                            <a class="nav-link" href="booking_history.php">Book History</a>
                         </li>
                         <?php endif; ?>
                         <li class="nav-item">
