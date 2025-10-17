@@ -42,6 +42,7 @@ try{
 
     if ($result->num_rows > 0) {
         $token = bin2hex(random_bytes(32));
+        date_default_timezone_set('UTC');
         $expires = date("Y-m-d H:i:s", time() + 3600);
         
         $delete_stmt = $connection->prepare("DELETE FROM password_resets WHERE email = ?");
@@ -68,7 +69,7 @@ try{
                 $mail->addAddress($email);
             
                 // This is the corrected line for the reset link
-                $reset_link = "http://localhost/college_project/book-a-flight-enhanced/book-a-flight-project-2/reset_password.php?token=" . $token . "&email=" . urlencode($email);
+                $reset_link = "http://localhost//book-a-flight-project-2/reset_password.php?token=" . $token . "&email=" . urlencode($email);
 
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Request';
@@ -90,6 +91,7 @@ try{
         echo json_encode(['success' => true, 'message' => 'If this email address is in our system, a password reset link will be sent to it.']);
     }
 } catch(Throwable $e) {
+    error_log($e->getMessage() . " in " . $e->getFile() . " on line " . $e->getLine());
     echo json_encode(['success' => false, 'message' => 'Internal server error.']);
     exit;
 }
