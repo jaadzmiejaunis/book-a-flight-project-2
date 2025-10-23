@@ -14,12 +14,30 @@ $five_star_reviews = []; // Initialize array for reviews
 // If a user is logged in, get their details from the database
 if ($loggedIn) {
     $user_id = $_SESSION['book_id'];
-    $sql = "SELECT book_username, book_user_roles, book_profile FROM BookUser WHERE book_id = ?";
+    // --- MODIFICATION: Added book_user_status to the query ---
+    $sql = "SELECT book_username, book_user_roles, book_profile, book_user_status FROM BookUser WHERE book_id = ?";
     if ($stmt = mysqli_prepare($connection, $sql)) {
         mysqli_stmt_bind_param($stmt, "i", $user_id);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
         if ($user = mysqli_fetch_assoc($result)) {
+            
+            // --- MODIFICATION: Check if user status is 'Inactive' or 'Deactivated' ---
+            if ($user['book_user_status'] === 'Inactive' || $user['book_user_status'] === 'Deactivated') {
+                // Log the user out completely
+                session_unset();
+                session_destroy();
+                
+                // Start a new session just to pass the error message
+                session_start();
+                $_SESSION['login_error'] = 'Your account is currently ' . strtolower($user['book_user_status']) . '. Please contact support for assistance.';
+                
+                // Redirect to login page
+                header('Location: login_page.php');
+                exit();
+            }
+            // --- END MODIFICATION ---
+
             $username = htmlspecialchars($user['book_username']);
             $user_role = $user['book_user_roles'];
             if (!empty($user['book_profile'])) {
@@ -249,8 +267,12 @@ function get_html_footer($loggedIn, $user_role) {
                             <li><a href="staff_booking_status.php">View Booking Status</a></li>
                             <li><a href="staff_user_feedback.php">User Feedback</a></li>';
         } else {
+            // --- MODIFICATION: Added Employee Accounts and Account Manager links for Admin ---
             $panel_links = '<li><a href="admin_flight_list.php">Flight List</a></li>
-                            <li><a href="admin_booking_list.php">Booking List</a></li>';
+                            <li><a href="admin_booking_list.php">Booking List</a></li>
+                            <li><a href="admin_employee_accounts.php">Employee Accounts</a></li>
+                            <li><a href="admin_account_manager.php">Account Manager</a></li>';
+            // --- End Modification ---
         }
         $role_specific_column = "<div class='col-lg-3 col-md-6 mb-4'><h6>{$panel_name}</h6><ul class='list-unstyled'>{$panel_links}</ul></div>";
     } else {
@@ -287,7 +309,7 @@ HTML;
 function get_html_bottom() {
     return <<<HTML
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -316,10 +338,11 @@ switch ($user_role) {
         $role_title = ($user_role === 'Admin') ? 'Admin' : 'Staff';
         echo get_html_head("{$role_title} Homepage - SierraFlight");
         $profile_image_html = '<img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav">';
+        
+        // --- MODIFICATION: Added Employee Accounts and Account Manager links for Admin ---
         $nav_links = ($user_role === 'Admin') ? '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="admin_flight_list.php">Flight List</a></li>
-                <li class="nav-item"><a class="nav-link" href="admin_booking_list.php">Booking List</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin_account_manager.php">Account Manager</a></li>
                 <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>'
             : '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
@@ -327,6 +350,18 @@ switch ($user_role) {
                 <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">View Booking Status</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
                 <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
+        // --- End Modification ---
+
+        // --- MODIFICATION: Set different welcome images for Admin and Staff ---
+        $welcome_image_html = '';
+        if ($user_role === 'Admin') {
+            $welcome_image_html = '<img src="image_website/website_image/sierraflight_admin_page.png" alt="Admin Dashboard View">';
+        } else { // Staff
+            // NOTE: Using a different image for staff. Update this path if you have a different one.
+            $welcome_image_html = '<img src="image_website/website_image/sierraflight_staff_page.png" alt="Staff Control Panel View">';
+        }
+        // --- End Modification ---
+
         echo <<<HTML
         <div class="top-gradient-bar">
             <div class="container">
@@ -336,12 +371,12 @@ switch ($user_role) {
                 </div>
             </div>
         </div>
-        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
+        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>{$nav_links}
         </ul></div></div></nav>
         <div class="page-content"><div class="container"><div class="row staff-welcome-banner">
             <div class="col-lg-6 text-content"><h1 class="display-4">Welcome, {$username}!</h1><p class="lead">{$role_title} Panel Homepage</p></div>
-            <div class="col-lg-6 p-0 image-content"><img src="image_website/website_image/sierraflight_staff_page.png" alt="Airport lounge view"></div>
+            <div class="col-lg-6 p-0 image-content">{$welcome_image_html}</div>
         </div></div></div>
 HTML;
         echo get_html_footer($loggedIn, $user_role);
@@ -362,7 +397,7 @@ HTML;
                 <div class="user-info">{$user_actions_html}</div>
             </div>
         </div>
-        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
+        <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>
             <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
             <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
@@ -424,3 +459,4 @@ HTML;
         break;
 }
 ?>
+

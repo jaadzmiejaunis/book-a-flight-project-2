@@ -26,12 +26,13 @@ $user_id = $_SESSION['book_id'];
 // Define the default profile picture path (web-accessible)
 $defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
 
-// Fetch user data from the database
-$sql = "SELECT book_username, book_email, book_profile FROM BookUser WHERE book_id = ?";
+// --- MODIFICATION: Fetch user data including user_roles ---
+$sql = "SELECT book_username, book_email, book_profile, book_user_roles FROM BookUser WHERE book_id = ?";
 $stmt = mysqli_prepare($connection, $sql);
 
 $username = ''; // Initialize variables to prevent errors if fetch fails
 $email = '';
+$user_role = 'Customer'; // Default role
 $profilePictureUrl = $defaultProfilePicture; // Set initial profile picture to default
 
 if ($stmt) {
@@ -49,6 +50,9 @@ if ($stmt) {
         // User data fetched successfully
         $username = htmlspecialchars($user['book_username']);
         $email = htmlspecialchars($user['book_email']);
+        $user_role = $user['book_user_roles']; // Get the user's role
+        $_SESSION['book_user_roles'] = $user_role; // Store role in session for consistency
+
         // Use fetched profile picture URL if available and not empty, otherwise use default
         if (!empty($user['book_profile'])) {
              $profilePictureUrl = htmlspecialchars($user['book_profile']);
@@ -72,6 +76,7 @@ if ($stmt) {
     // Display a generic error message to the user
     die("An internal error occurred. Please try again.");
 }
+// --- END MODIFICATION ---
 
 // Close database connection
 mysqli_close($connection);
@@ -171,7 +176,10 @@ if (empty($navbarProfilePictureUrl)) {
               align-items: center;
           }
           .top-gradient-bar .user-info a:hover {
-               text-decoration: underline;
+               text-decoration: none; /* Changed from underline */
+          }
+          .top-gradient-bar .user-info span {
+              margin-right: 8px; /* Added margin */
           }
 
          .top-gradient-bar .profile-picture-nav,
@@ -186,6 +194,8 @@ if (empty($navbarProfilePictureUrl)) {
          }
           .top-gradient-bar .profile-icon-nav {
                border: none;
+               font-size: 36px; /* Added font-size */
+               color: white; /* Added color */
           }
 
           .top-gradient-bar .btn-danger {
@@ -424,8 +434,14 @@ if (empty($navbarProfilePictureUrl)) {
 
     <div class="top-gradient-bar">
         <div class="container">
-            <a href="index.php" class="site-title">
+            <!-- --- MODIFICATION: Added Role Title --- -->
+            <a href="homepage.php" class="site-title">
                 <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+                <?php if ($user_role === 'Admin'): ?>
+                    <span>(Admin)</span>
+                <?php elseif ($user_role === 'Staff'): ?>
+                    <span>(Staff)</span>
+                <?php endif; ?>
             </a>
             <div class="user-info">
                 <?php if (isset($_SESSION['book_id'])): ?>
@@ -445,37 +461,61 @@ if (empty($navbarProfilePictureUrl)) {
         </div>
     </div>
 
+    <!-- --- MODIFICATION: Updated Navigation Bar Logic --- -->
     <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container"> <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <div class="container">
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="index.php">Home</a>
+                        <a class="nav-link" href="homepage.php">Home</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="about.php">About</a>
                     </li>
-                    <li class="nav-item">
-                         <?php if (isset($_SESSION['book_id'])): ?>
-                              <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
-                         <?php else: ?>
-                              <a class="nav-link" href="login_page.php">Book a Flight</a>
-                         <?php endif; ?>
-                    </li>
-                     <?php if (isset($_SESSION['book_id'])): ?>
-                     <li class="nav-item active">
-                         <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
-                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link" href="booking_history.php">Book History</a>
-                     </li>
-                     <?php endif; ?>
+                    <?php if ($user_role === 'Admin'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_account_manager.php">Account Manager</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
+                        </li>
+                    <?php elseif ($user_role === 'Staff'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="staff_user_feedback.php">User Feedback</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
+                        </li>
+                    <?php elseif ($user_role === 'Customer'): ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="booking_history.php">Book History</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
+                        </li>
+                    <?php else: // Guest (Shouldn't be able to see profile page, but good to have) ?>
+                        <li class="nav-item">
+                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                        </li>
+                    <?php endif; ?>
                 </ul>
             </div>
         </div>
     </nav>
+    <!-- --- END MODIFICATION --- -->
+
 
     <div class="container page-content">
         <div class="profile-container">
@@ -519,7 +559,7 @@ if (empty($navbarProfilePictureUrl)) {
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
     // Script to display the chosen file name in the custom file input label

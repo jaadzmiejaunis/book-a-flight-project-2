@@ -68,12 +68,12 @@ try{
                 $mail->addAddress($email);
             
                 // This is the corrected line for the reset link
-                $reset_link = "http://localhost/college_project/book-a-flight-enhanced/book-a-flight-project-2/reset_password.php?token=" . $token . "&email=" . urlencode($email);
+                $reset_link = "http://localhost/college_project/book-a-flight-enhanced/book-a-flight-project-2/reset_password.php?token= " . $token . "&email=" . urlencode($email);
 
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Request';
-                $mail->Body    = 'Hello, a password reset was requested for your account. To reset your password, please click the following link: <a href="' . $reset_link . '">Reset Password</a>';
-                $mail->AltBody = 'Hello, a password reset was requested for your account. To reset your password, please copy and paste the following link into your browser: ' . $reset_link;
+                $mail->Body    = 'Hello, a password reset was requested for your account. To reset your password, please click the following link: <a href="' . htmlspecialchars($reset_link) . '">Reset Password</a>';
+                $mail->AltBody = 'Hello, a password reset was requested for your account. To reset your password, please copy and paste the following link into your browser: ' . htmlspecialchars($reset_link) ;
             
                 $mail->send();
                 echo json_encode(['success' => true, 'message' => 'A password reset link has been sent to your email.']);
