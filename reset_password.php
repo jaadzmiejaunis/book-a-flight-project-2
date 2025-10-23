@@ -36,9 +36,13 @@ if (!isset($_GET['token']) || !isset($_GET['email'])) {
             $error = "Passwords do not match.";
         } else {
             // Find the token in the password_resets table
-            $stmt = $connection->prepare("SELECT * FROM password_resets WHERE token = ? AND email = ? AND expires > NOW()");
+            $stmt = $connection->prepare("SELECT * FROM password_resets WHERE token = ? AND email = ? AND expires > UTC_TIMESTAMP()");
             $stmt->bind_param("ss", $token, $email);
-            $stmt->execute();
+            
+            if(!$stmt->execute()){
+                die("Execute error: " . $stmt->error);
+            }
+
             $result = $stmt->get_result();
 
             if ($result->num_rows > 0) {
