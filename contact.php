@@ -1,22 +1,16 @@
 <?php
-/**
- * about.php
- * This page provides information about the flight booking system.
- * It includes the standard navigation bar which changes based on user login status.
- */
-
-// Start the session
 session_start();
 
 // --- User Authentication and Data Retrieval ---
-// Check if the user is logged in by checking for the 'book_id' session variable.
 $loggedIn = isset($_SESSION['book_id']);
+$username = 'Guest';
+$user_role = 'Guest';
 
-// Get the username from the session if logged in, otherwise set to 'Guest'.
-// htmlspecialchars is used to prevent XSS when displaying the username.
-$username = 'Guest'; // Default
+// --- FIX: Define $defaultProfilePicture ---
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png'; 
+$profilePictureUrl = $defaultProfilePicture; // Set default value
+
 if ($loggedIn && isset($_SESSION['book_id'])) {
-    // --- Database Connection ---
     include 'connection.php';
     if ($connection) {
         $user_id = $_SESSION['book_id'];
@@ -38,24 +32,6 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
         mysqli_close($connection);
     }
 }
-
-// Get the user's role from the session. Defaults to 'Guest' if not set.
-$user_role = $_SESSION['book_user_roles'] ?? 'Guest';
-
-// Define the default profile picture path.
-$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png'; 
-
-// Get the profile picture URL from the session if logged in and available,
-// otherwise use the default profile picture path.
-$profilePictureUrl = $profilePictureUrl ?? $defaultProfilePicture;
-
-// Set the site title based on the user's role
-$siteTitle = 'SierraFlight';
-if ($user_role === 'Admin') {
-    $siteTitle = 'SierraFlight (Admin)';
-} elseif ($user_role === 'Staff') {
-    $siteTitle = 'SierraFlight (Staff)';
-}
 ?>
 
 <!DOCTYPE html>
@@ -63,7 +39,7 @@ if ($user_role === 'Admin') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About Us - SierraFlight</title>
+    <title>Contact Us - SierraFlight</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -88,7 +64,6 @@ if ($user_role === 'Admin') {
             align-items: center;
             flex-wrap: wrap;
         }
-
         .top-gradient-bar .container {
             display: flex;
             justify-content: space-between;
@@ -98,7 +73,6 @@ if ($user_role === 'Admin') {
             margin: 0 auto;
             flex-wrap: wrap;
         }
-
         .top-gradient-bar .site-title {
             font-size: 1.5rem;
             font-weight: bold;
@@ -106,21 +80,18 @@ if ($user_role === 'Admin') {
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
-            display: flex; /* Added for vertical alignment */
-            align-items: center; /* Added for vertical alignment */
+            display: flex;
+            align-items: center;
         }
-
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
         }
-        
         .top-gradient-bar .site-title .sierraflight-logo {
             width: 150px;
             height: auto;
             margin-right: 10px;
             vertical-align: middle;
         }
-
         .top-gradient-bar .user-info {
             display: flex;
             align-items: center;
@@ -129,22 +100,18 @@ if ($user_role === 'Admin') {
             margin-left: auto;
             white-space: nowrap;
         }
-
         .top-gradient-bar .user-info a {
             color: white;
             text-decoration: none;
             display: flex;
             align-items: center;
         }
-
         .top-gradient-bar .user-info a:hover {
             text-decoration: none;
         }
-        
         .top-gradient-bar .user-info span {
             margin-right: 8px;
         }
-
         .top-gradient-bar .profile-picture-nav,
         .top-gradient-bar .profile-icon-nav {
             width: 36px;
@@ -155,13 +122,11 @@ if ($user_role === 'Admin') {
             object-fit: cover;
             border: 1px solid white;
         }
-
         .top-gradient-bar .profile-icon-nav {
             border: none;
             font-size: 36px;
             color: white;
         }
-
         .top-gradient-bar .btn-danger {
             background-color: #dc3545;
             border-color: #dc3545;
@@ -172,20 +137,11 @@ if ($user_role === 'Admin') {
             margin-left: 10px;
         }
 
-        .top-gradient-bar .btn-danger:hover {
-            background-color: #c82333;
-            border-color: #bd2130;
-        }
-
         .navbar {
             background-color: #212529;
             padding: 0 20px;
             margin-bottom: 0;
-            background-image: none;
-            box-shadow: none;
-            min-height: auto;
         }
-
         .navbar > .container {
             display: flex;
             align-items: center;
@@ -194,12 +150,9 @@ if ($user_role === 'Admin') {
             margin: 0 auto;
             padding: 0;
         }
-
-        .navbar-brand,
         .navbar-toggler {
             display: none;
         }
-
         @media (max-width: 991.98px) {
             .navbar-toggler {
                 display: block;
@@ -210,52 +163,43 @@ if ($user_role === 'Admin') {
                 border: 1px solid rgba(255, 255, 255, .1);
                 border-radius: .25rem;
             }
-
             .navbar-collapse {
                 background-color: #212529;
                 padding: 10px;
             }
-
             .navbar > .container {
                 justify-content: space-between;
             }
-
             .navbar-collapse {
                 flex-grow: 1;
             }
         }
-
-        /* --- START NAVBAR STYLE --- */
+        
         .navbar-nav .nav-link {
             padding: 8px 15px;
             color: white !important;
             transition: background-color 0.3s ease, text-decoration 0.3s ease;
-            text-decoration: none; /* Base state: no underline */
-            background-color: transparent; /* Base state: no background */
+            text-decoration: none;
+            background-color: transparent;
         }
-        /* This is for HOVER */
         .navbar-nav .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1); /* Grey block ON HOVER */
+            background-color: rgba(255, 255, 255, 0.1);
             text-decoration: underline;
         }
-        /* This is for the ACTIVE PAGE LINK */
         .navbar-nav .nav-item.active .nav-link {
-            background-color: transparent !important; /* NO grey block on active page */
-            text-decoration: none; /* NO underline on active page */
+            background-color: transparent !important;
+            text-decoration: none;
         }
-        /* This is for the split-second mouse click */
         .navbar-nav .nav-link:active {
             background-color: rgba(255, 255, 255, 0.2); 
         }
-        /* --- END NAVBAR STYLE --- */
 
         .page-content {
             padding: 20px;
             flex-grow: 1;
         }
-
-        .about-container {
-            max-width: 800px;
+        .contact-container {
+            max-width: 900px;
             margin: 30px auto;
             background-color: #282b3c;
             border-radius: 8px;
@@ -263,22 +207,66 @@ if ($user_role === 'Admin') {
             padding: 30px;
             color: #e0e0e0;
         }
-
-        .about-header {
-            text-align: center;
-            margin-bottom: 30px;
+        .contact-header {
+            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
             color: white;
-            font-size: 2rem;
+            padding: 20px;
+            margin: -30px -30px 30px -30px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
-
-        .about-content {
+        .contact-info {
+            list-style: none;
+            padding-left: 0;
             font-size: 1.1rem;
-            line-height: 1.6;
+            line-height: 2.2;
         }
-
-        .about-content h3 {
+        .contact-info li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .contact-info i {
             color: #ffb03a;
-            margin-top: 20px;
+            font-size: 1.5rem;
+            margin-right: 20px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .contact-form .form-control {
+            background-color: #3a3e52;
+            color: #fff;
+            border: 1px solid #5a5a8a;
+        }
+        .contact-form .form-control:focus {
+            border-color: #ffb03a;
+            box-shadow: 0 0 0 0.2rem rgba(255, 176, 58, 0.5);
+            outline: none;
+            background-color: #3a3e52;
+            color: #fff;
+        }
+        .contact-form .form-group label {
+            color: #e0e0e0;
+            margin-bottom: .5rem;
+        }
+        .contact-form .btn-primary {
+            background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-position 0.5s ease;
+            background-size: 200% auto;
+            width: 100%;
+        }
+        .contact-form .btn-primary:hover {
+            background-position: right center;
         }
     </style>
 </head>
@@ -321,100 +309,91 @@ if ($user_role === 'Admin') {
                     <li class="nav-item">
                         <a class="nav-link" href="homepage.php">Home</a>
                     </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="about.php">About <span class="sr-only">(current)</span></a>
-                    </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="contact.php">Contact Us</a>
+                        <a class="nav-link" href="about.php">About</a>
+                    </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="contact.php">Contact Us <span class="sr-only">(current)</span></a>
                     </li>
                     
                     <?php if ($user_role === 'Admin'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_account_manager.php">Account Manager</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_staff_salary.php">Staff Salary</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="admin_salary_report.php">Salary Report</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="admin_account_manager.php">Account Manager</a></li>
+                        <li class="nav-item"><a class="nav-link" href="admin_staff_salary.php">Staff Salary</a></li>
+                        <li class="nav-item"><a class="nav-link" href="admin_salary_report.php">Salary Report</a></li>
+                        <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php elseif ($user_role === 'Staff'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="staff_sales_report.php">Sales Report</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="staff_user_feedback.php">User Feedback</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="staff_sales_report.php">Sales Report</a></li>
+                        <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">Booking Status</a></li>
+                        <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
+                        <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php elseif ($user_role === 'Customer'): ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="booking_history.php">Book History</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="profile_page.php">Profile</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
+                        <li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>
+                        <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php else: // Guest ?>
-                        <li class="nav-item">
-                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
-                        </li>
+                        <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
                     <?php endif; ?>
                 </ul>
             </div>
         </div>
     </nav>
+
     <div class="container page-content">
-        <div class="about-container">
-            <?php if ($user_role === 'Admin'): ?>
-                <h2 class="about-header">About Our System (Admin View)</h2>
-                <div class="about-content">
-                    <p>Welcome, Admin! This section provides an overview of your responsibilities and the system's administrative features.</p>
-                    <h3>Admin Responsibilities:</h3>
-                    <ul>
-                        <li>Manage user accounts, roles, and statuses.</li>
-                        <li>Monitor site performance and user activity.</li>
-                        <li>Handle critical booking issues and data management.</li>
-                        <li>Access comprehensive analytics and reports.</li>
-                    </ul>
-                    <p>Your role is essential for ensuring the smooth and secure operation of the flight booking system. Thank you for your hard work!</p>
+        <div class="contact-container">
+            <div class="contact-header">Get In Touch</div>
+            
+            <?php if (isset($_SESSION['contact_success'])): ?>
+                <div class="alert alert-success" role="alert">
+                    <?php echo $_SESSION['contact_success']; ?>
                 </div>
-            <?php elseif ($user_role === 'Staff'): ?>
-                <h2 class="about-header">About Our System (Staff View)</h2>
-                <div class="about-content">
-                    <p>Welcome, Staff! This page outlines your role within the SierraFlight team and the tools available to you.</p>
-                    <h3>Staff Responsibilities:</h3>
-                    <ul>
-                        <li>Process and confirm flight bookings.</li>
-                        <li>Assist customers with booking inquiries and issues.</li>
-                        <li>Update booking statuses and customer details.</li>
-                        <li>Maintain accurate flight information.</li>
-                    </ul>
-                    <p>Your efforts directly contribute to a positive customer experience. Thank you for your dedication!</p>
-                </div>
-            <?php else: // This handles 'Customer' and 'Guest' roles ?>
-                <h2 class="about-header">About Our Flight Booking System</h2>
-                <div class="about-content">
-                    <p>Welcome to our flight booking system! We aim to provide a simple and efficient way for you to find and book flights to various destinations.</p>
-                    <p>Our system allows you to search for flights based on origin, destination, dates, and class. Once you find the perfect flight, you can proceed with a straightforward booking process.</p>
-                    <p>For registered users, we offer personalized features such as a profile page to manage your information and a history of your past bookings.</p>
-                    <p>This project was developed as part of a college project, focusing on building a functional web application with user authentication, database interaction, and basic flight booking capabilities.</p>
-                    <p>We are continuously working to improve the system and add more features. Thank you for using our flight booking system!</p>
-                </div>
+                <?php unset($_SESSION['contact_success']); ?>
             <?php endif; ?>
+            
+            <?php if (isset($_SESSION['contact_error'])): ?>
+                <div class="alert alert-danger" role="alert">
+                    <?php echo $_SESSION['contact_error']; ?>
+                </div>
+                <?php unset($_SESSION['contact_error']); ?>
+            <?php endif; ?>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h3>Contact Information</h3>
+                    <p>Have questions? We're here to help. Reach out to us via phone, email, or by using the contact form.</p>
+                    <ul class="contact-info">
+                        <li><i class="fas fa-phone"></i> +60 12-345 6789</li>
+                        <li><i class="fas fa-envelope"></i> support@sierraflight.com</li>
+                        <li><i class="fas fa-map-marker-alt"></i> Jalan Sierra, 88000 Kota Kinabalu, Sabah, Malaysia</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h3>Send Us a Message</h3>
+                    <form action="send_contact_form.php" method="POST" class="contact-form">
+                        <div class="form-group">
+                            <label for="name">Your Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Your Email</label>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="subject">Subject</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message</label>
+                            <textarea class="form-control" id="message" name="message" rows="5" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
+    
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>

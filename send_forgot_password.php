@@ -69,7 +69,7 @@ try{
                 $mail->addAddress($email);
             
                 // This is the corrected line for the reset link
-                $reset_link = "http://localhost/college_project/book-a-flight-enhanced/book-a-flight-project-2/reset_password.php?token= " . $token . "&email=" . urlencode($email);
+                $reset_link = "http://localhost/college_project/book-a-flight-enhanced/book-a-flight-project-2/reset_password.php?token=" . $token . "&email=" . urlencode($email);
 
                 $mail->isHTML(true);
                 $mail->Subject = 'Password Reset Request';

@@ -21,7 +21,7 @@ $siteTitle = 'SierraFlight';
 if (!isset($_GET['token']) || !isset($_GET['email'])) {
     $error = "Invalid password reset link.";
 } else {
-    $token = $_GET['token'];
+    $token = trim($_GET['token']);
     $email = $_GET['email'];
 
     // Check if the form was submitted to change the password

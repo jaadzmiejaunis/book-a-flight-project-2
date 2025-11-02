@@ -52,17 +52,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $user_id_to_update = $_POST['user_id_to_update'] ?? 0;
     $current_view = $_POST['current_view'] ?? 'active';
 
-    // --- CRITICAL SAFETY CHECK: Prevent admin from modifying their own account ---
     if ($user_id_to_update == $current_admin_user_id) {
         $_SESSION['process_message'] = "Error: You cannot modify your own account.";
         $_SESSION['message_type'] = "danger";
     } else {
-        // --- Handle Role Update ---
         if ($action === 'update_role' && isset($_POST['new_role'])) {
             $new_role = $_POST['new_role'];
             $valid_roles = ['Customer', 'Staff', 'Admin'];
 
             if (in_array($new_role, $valid_roles)) {
+                $old_role_sql = "SELECT book_user_roles FROM BookUser WHERE book_id = ?";
+                $old_role_stmt = mysqli_prepare($connection, $old_role_sql);
+                mysqli_stmt_bind_param($old_role_stmt, "i", $user_id_to_update);
+                mysqli_stmt_execute($old_role_stmt);
+                $old_role_result = mysqli_stmt_get_result($old_role_stmt);
+                $old_role_row = mysqli_fetch_assoc($old_role_result);
+                $old_role = $old_role_row ? $old_role_row['book_user_roles'] : '';
+                mysqli_stmt_close($old_role_stmt);
+
                 $update_sql = "UPDATE BookUser SET book_user_roles = ? WHERE book_id = ?";
                 $update_stmt = mysqli_prepare($connection, $update_sql);
                 mysqli_stmt_bind_param($update_stmt, "si", $new_role, $user_id_to_update);
@@ -70,6 +77,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if (mysqli_stmt_execute($update_stmt)) {
                     $_SESSION['process_message'] = "User role updated successfully!";
                     $_SESSION['message_type'] = "success";
+
+                    if ($new_role === 'Staff' && $old_role !== 'Staff') {
+                        $insert_staff_sql = "INSERT INTO StaffDetails (user_id) VALUES (?) ON DUPLICATE KEY UPDATE user_id=user_id";
+                        $insert_staff_stmt = mysqli_prepare($connection, $insert_staff_sql);
+                        mysqli_stmt_bind_param($insert_staff_stmt, "i", $user_id_to_update);
+                        mysqli_stmt_execute($insert_staff_stmt);
+                        mysqli_stmt_close($insert_staff_stmt);
+
+                    } else if ($new_role !== 'Staff' && $old_role === 'Staff') {
+                        $delete_staff_sql = "DELETE FROM StaffDetails WHERE user_id = ?";
+                        $delete_staff_stmt = mysqli_prepare($connection, $delete_staff_sql);
+                        mysqli_stmt_bind_param($delete_staff_stmt, "i", $user_id_to_update);
+                        mysqli_stmt_execute($delete_staff_stmt);
+                        mysqli_stmt_close($delete_staff_stmt);
+                    }
                 } else {
                     $_SESSION['process_message'] = "Error updating user role: " . mysqli_error($connection);
                     $_SESSION['message_type'] = "danger";
@@ -80,7 +102,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 $_SESSION['message_type'] = "danger";
             }
         } 
-        // --- Handle Status Update (Active, Inactive) ---
         elseif ($action === 'update_status' && isset($_POST['new_status'])) {
             $new_status = $_POST['new_status'];
             $valid_statuses = ['Active', 'Inactive'];
@@ -106,13 +127,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         }
     }
     
-    // Redirect to refresh the page, preserving search and view state
     $search_query = http_build_query(['search' => $_GET['search'] ?? '']);
     header("Location: admin_account_manager.php?view=" . $current_view . "&" . $search_query);
     exit();
 }
 // --- End Handle POST Requests ---
-
 
 // --- Fetch All Users List (GET Request with Search and View) ---
 $all_users = [];
@@ -120,32 +139,34 @@ $error_message = '';
 $current_view = $_GET['view'] ?? 'active'; // 'active' or 'inactive'
 $search_term = $_GET['search'] ?? '';     // Search term
 
-// Base SQL: Fetch all users EXCEPT the currently logged-in admin
-$sql_base = "SELECT book_id, book_username, book_email, book_user_roles, book_user_status, book_user_register_date
-             FROM BookUser 
-             WHERE book_id != ?";
+$sql_base = "SELECT 
+                bu.book_id, 
+                bu.book_username, 
+                bu.book_email, 
+                bu.book_user_roles, 
+                bu.book_user_status, 
+                bu.book_user_register_date, 
+                sd.total_salary 
+             FROM BookUser bu
+             LEFT JOIN StaffDetails sd ON bu.book_id = sd.user_id
+             WHERE bu.book_id != ?";
 $sql_params = [$current_admin_user_id];
 $sql_types = 'i';
 
-// Add view filter
 if ($current_view === 'inactive') {
-    $sql_base .= " AND book_user_status = 'Inactive'";
+    $sql_base .= " AND bu.book_user_status = 'Inactive'";
 } else {
-    // Default view is 'active'
-    $sql_base .= " AND book_user_status = 'Active'";
+    $sql_base .= " AND bu.book_user_status = 'Active'";
 }
 
-// --- MODIFICATION: Added book_user_register_date to search query ---
 if (!empty($search_term)) {
-    // Using DATE_FORMAT to match YYYY-MM-DD text searches
-    $sql_base .= " AND (book_username LIKE ? OR book_email LIKE ? OR book_user_roles LIKE ? OR DATE_FORMAT(book_user_register_date, '%Y-%m-%d') LIKE ?)";
+    $sql_base .= " AND (bu.book_username LIKE ? OR bu.book_email LIKE ? OR bu.book_user_roles LIKE ? OR DATE_FORMAT(bu.book_user_register_date, '%Y-%m-%d') LIKE ?)";
     $search_like = '%' . $search_term . '%';
     array_push($sql_params, $search_like, $search_like, $search_like, $search_like);
-    $sql_types .= 'ssss'; // Updated from 'sss' to 'ssss'
+    $sql_types .= 'ssss';
 }
-// --- End Modification ---
 
-$sql_base .= " ORDER BY book_user_roles, book_username";
+$sql_base .= " ORDER BY bu.book_user_roles, bu.book_username";
 
 if ($stmt_users = mysqli_prepare($connection, $sql_base)) {
     mysqli_stmt_bind_param($stmt_users, $sql_types, ...$sql_params);
@@ -167,16 +188,15 @@ if ($stmt_users = mysqli_prepare($connection, $sql_base)) {
 }
 // --- End Fetch All Users List ---
 
-// Close database connection
 mysqli_close($connection);
 
-// --- Handle Success or Error Messages from Processing Scripts ---
 $process_message = $_SESSION['process_message'] ?? '';
 $message_type = $_SESSION['message_type'] ?? '';
 
 unset($_SESSION['process_message']);
 unset($_SESSION['message_type']);
 
+$current_page_name = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -188,7 +208,6 @@ unset($_SESSION['message_type']);
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Copied styles from admin_employee_accounts.php for consistency */
         body {
             background-color: #1e1e2d;
             color: #e0e0e0;
@@ -199,7 +218,6 @@ unset($_SESSION['message_type']);
             flex-direction: column;
             min-height: 100vh;
         }
-
         .top-gradient-bar {
             background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
             padding: 10px 20px;
@@ -210,7 +228,6 @@ unset($_SESSION['message_type']);
             align-items: center;
             flex-wrap: wrap;
         }
-
         .top-gradient-bar .container {
             display: flex;
             justify-content: space-between;
@@ -220,7 +237,6 @@ unset($_SESSION['message_type']);
             margin: 0 auto;
             flex-wrap: wrap;
         }
-
         .top-gradient-bar .site-title {
             font-size: 1.5rem;
             font-weight: bold;
@@ -240,7 +256,6 @@ unset($_SESSION['message_type']);
             margin-right: 10px;
             vertical-align: middle;
         }
-
         .top-gradient-bar .user-info {
             display: flex;
             align-items: center;
@@ -249,7 +264,6 @@ unset($_SESSION['message_type']);
             margin-left: auto;
             white-space: nowrap;
         }
-
         .top-gradient-bar .profile-picture-nav, .top-gradient-bar .profile-icon-nav {
             width: 36px;
             height: 36px;
@@ -259,7 +273,6 @@ unset($_SESSION['message_type']);
             object-fit: cover;
             border: 1px solid white;
         }
-
         .top-gradient-bar .btn-danger {
             background-color: #dc3545;
             border-color: #dc3545;
@@ -273,13 +286,11 @@ unset($_SESSION['message_type']);
             background-color: #c82333;
             border-color: #bd2130;
         }
-
         .navbar {
             background-color: #212529;
             padding: 0 20px;
             margin-bottom: 0;
         }
-
         .navbar > .container {
             display: flex;
             align-items: center;
@@ -288,10 +299,10 @@ unset($_SESSION['message_type']);
             margin: 0 auto;
             padding: 0;
         }
-
+        
+        /* --- START NAVBAR STYLE --- */
         .navbar-nav .nav-link {
-            padding: 8px 15px;
-            color: white !important;
+            padding: 8px 15px; color: white !important;
             transition: background-color 0.3s ease, text-decoration 0.3s ease;
         }
         .navbar-nav .nav-link:hover {
@@ -299,17 +310,15 @@ unset($_SESSION['message_type']);
             text-decoration: underline;
             color: white !important;
         }
-
-        /* Tab styles */
+        /* NOTE: No .active rule is needed to match homepage.php */
+        /* --- END NAVBAR STYLE --- */
+        
         .nav-tabs {
             border-bottom: 1px solid #5a5a8a;
         }
         .nav-tabs .nav-link {
             border: 1px solid transparent;
-            border-top-left-radius: .25rem;
-            border-top-right-radius: .25rem;
             color: #ccc;
-            background-color: transparent;
         }
         .nav-tabs .nav-link:hover,
         .nav-tabs .nav-link:focus {
@@ -320,11 +329,6 @@ unset($_SESSION['message_type']);
             color: #fff;
             background-color: #3a3e52;
             border-color: #5a5a8a #5a5a8a #3a3e52;
-        }
-        
-        /* Search Bar */
-        .search-bar {
-            margin-bottom: 20px;
         }
         .search-bar .form-control {
             background-color: #3a3e52;
@@ -343,12 +347,10 @@ unset($_SESSION['message_type']);
         .search-bar .btn-primary:hover {
             background-position: right center;
         }
-        
         .page-content {
             padding: 20px;
             flex-grow: 1;
         }
-
         .admin-container {
             margin: 30px auto;
             max-width: 1350px; 
@@ -358,7 +360,6 @@ unset($_SESSION['message_type']);
             padding: 30px;
             color: #e0e0e0;
         }
-
         .admin-header {
             background-image: linear-gradient(to right, #0D1164, #EA2264, #F78D60);
             color: white;
@@ -370,7 +371,6 @@ unset($_SESSION['message_type']);
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
         }
-
         .account-table {
             width: 100%;
             border-collapse: collapse;
@@ -391,7 +391,6 @@ unset($_SESSION['message_type']);
         .account-table tbody tr:hover {
             background-color: #343a40;
         }
-
         .account-table .btn {
             padding: 5px 10px;
             margin-right: 5px;
@@ -400,14 +399,9 @@ unset($_SESSION['message_type']);
             width: 120px; 
             box-sizing: border-box; 
         }
-        
         .account-table .btn-secondary { background-color: #6c757d; border-color: #6c757d; color: white; }
-        .account-table .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
         .account-table .btn-danger { background-color: #dc3545; border-color: #dc3545; }
-        .account-table .btn-danger:hover { background-color: #c82333; border-color: #bd2130; }
         .account-table .btn-success { background-color: #28a745; border-color: #28a745; }
-        .account-table .btn-success:hover { background-color: #218838; border-color: #1e7e34; }
-
         .status-select {
             background-color: #3a3e52;
             color: #fff;
@@ -421,22 +415,17 @@ unset($_SESSION['message_type']);
             width: 120px; 
             box-sizing: border-box; 
         }
-
         .status-Active { color: #28a745; font-weight: bold; }
         .status-Inactive { color: #ffc107; font-weight: bold; }
-        
         .role-Admin { color: #dc3545; font-weight: bold; }
         .role-Staff { color: #ffc107; font-weight: bold; }
         .role-Customer { color: #17a2b8; font-weight: bold; }
-
-
         .no-accounts {
             text-align: center;
             color: #ccc;
             margin-top: 20px;
             padding: 20px;
         }
-
         .alert-success { color: #155724; background-color: #d4edda; border-color: #c3e6cb; }
         .alert-danger { color: #721c24; background-color: #f8d7da; border-color: #f5c6cb; }
     </style>
@@ -450,17 +439,11 @@ unset($_SESSION['message_type']);
                 <span>(Admin)</span>
             </a>
             <div class="user-info">
-                <?php if ($loggedIn): ?>
-                    <span>Welcome, <?php echo $username; ?>!</span>
-                    <a href="profile_page.php">
-                        <?php if (empty($profilePictureUrl) || strpos($profilePictureUrl, 'default') !== false): ?>
-                            <i class="fas fa-user-circle fa-lg profile-icon-nav" style="color: white; font-size: 36px; margin-left: 8px;"></i>
-                        <?php else: ?>
-                            <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                        <?php endif; ?>
-                    </a>
-                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
-                <?php endif; ?>
+                <span>Welcome, <?php echo $username; ?>!</span>
+                <a href="profile_page.php">
+                    <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
+                </a>
+                <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
             </div>
         </div>
     </div>
@@ -472,18 +455,12 @@ unset($_SESSION['message_type']);
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="homepage.php">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="about.php">About</a>
-                    </li>
-                    <li class="nav-item active">
-                        <a class="nav-link" href="admin_account_manager.php">Account Manager <span class="sr-only">(current)</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="profile_page.php">Profile</a>
-                    </li>
+                    <li class="nav-item"><a class="nav-link" href="homepage.php">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+                    <li class="nav-item active"><a class="nav-link" href="admin_account_manager.php">Account Manager</a></li>
+                    <li class="nav-item"><a class="nav-link" href="admin_staff_salary.php">Staff Salary</a></li>
+                    <li class="nav-item"><a class="nav-link" href="admin_salary_report.php">Salary Report</a></li>
+                    <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                 </ul>
             </div>
         </div>
@@ -507,11 +484,9 @@ unset($_SESSION['message_type']);
                 </div>
             <?php endif; ?>
 
-            <!-- Search Bar -->
             <form method="GET" action="admin_account_manager.php" class="search-bar">
                 <input type="hidden" name="view" value="<?php echo htmlspecialchars($current_view); ?>">
                 <div class="input-group">
-                    <!-- --- MODIFICATION: Updated placeholder text --- -->
                     <input type="text" name="search" class="form-control" placeholder="Search by Username, Email, Role, or Date (YYYY-MM-DD)..." value="<?php echo htmlspecialchars($search_term); ?>">
                     <div class="input-group-append">
                         <button class="btn btn-primary" type="submit"><i class="fas fa-search"></i> Search</button>
@@ -519,7 +494,6 @@ unset($_SESSION['message_type']);
                 </div>
             </form>
 
-            <!-- Tabs Navigation -->
             <ul class="nav nav-tabs mb-3" id="accountTabs" role="tablist">
                 <li class="nav-item">
                     <a class="nav-link <?php echo ($current_view === 'active') ? 'active' : ''; ?>" href="admin_account_manager.php?view=active&search=<?php echo htmlspecialchars($search_term); ?>">Active Users</a>
@@ -537,11 +511,11 @@ unset($_SESSION['message_type']);
                             <table class="table account-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 30px;"><input type="checkbox" id="select-all-checkbox"></th>
                                         <th>Username</th>
                                         <th>Email</th>
                                         <th style="white-space: nowrap;">Registered On</th>
                                         <th>Current Role</th>
+                                        <th>Total Earned (RM)</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -549,7 +523,6 @@ unset($_SESSION['message_type']);
                                 <tbody>
                                     <?php foreach ($all_users as $user): ?>
                                         <tr>
-                                            <td><input type="checkbox" class="user-checkbox" name="user_ids[]" value="<?php echo htmlspecialchars($user['book_id']); ?>"></td>
                                             <td><?php echo htmlspecialchars($user['book_username']); ?></td>
                                             <td><?php echo htmlspecialchars($user['book_email']); ?></td>
                                             <td style="white-space: nowrap;">
@@ -567,13 +540,23 @@ unset($_SESSION['message_type']);
                                                     <?php echo htmlspecialchars($user['book_user_roles']); ?>
                                                 </span>
                                             </td>
+                                            
+                                            <td>
+                                                <?php if ($user['book_user_roles'] === 'Staff'): ?>
+                                                    <span style="color: #28a745; font-weight: bold;">
+                                                        <?php echo number_format($user['total_salary'], 2); ?>
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span style="color: #6c757d;">N/A</span>
+                                                <?php endif; ?>
+                                            </td>
+
                                             <td>
                                                 <span class="status-<?php echo htmlspecialchars($user['book_user_status']); ?>">
                                                     <?php echo htmlspecialchars($user['book_user_status']); ?>
                                                 </span>
                                             </td>
                                             <td>
-                                                <!-- Form for Role Update -->
                                                 <form method="post" action="admin_account_manager.php?search=<?php echo htmlspecialchars($search_term); ?>" style="display: block;">
                                                     <input type="hidden" name="action" value="update_role">
                                                     <input type="hidden" name="user_id_to_update" value="<?php echo htmlspecialchars($user['book_id']); ?>">
@@ -586,7 +569,6 @@ unset($_SESSION['message_type']);
                                                     <button type="submit" class="btn btn-secondary btn-sm" style="width: 120px;">Update Role</button>
                                                 </form>
 
-                                                <!-- Form for Status Update -->
                                                 <form method="post" action="admin_account_manager.php?search=<?php echo htmlspecialchars($search_term); ?>" style="display: block; margin-top: 5px;">
                                                     <input type="hidden" name="action" value="update_status">
                                                     <input type="hidden" name="user_id_to_update" value="<?php echo htmlspecialchars($user['book_id']); ?>">
@@ -625,21 +607,5 @@ unset($_SESSION['message_type']);
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const selectAll = document.getElementById('select-all-checkbox');
-            const userCheckboxes = document.querySelectorAll('.user-checkbox');
-
-            if (selectAll) {
-                selectAll.addEventListener('click', function() {
-                    userCheckboxes.forEach(checkbox => {
-                        checkbox.checked = selectAll.checked;
-                    });
-                });
-            }
-        });
-    </script>
 </body>
 </html>
-

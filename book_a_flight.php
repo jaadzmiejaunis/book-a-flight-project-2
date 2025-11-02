@@ -544,14 +544,17 @@ mysqli_close($connection);
                         <a class="nav-link" href="about.php">About</a>
                     </li>
                     <li class="nav-item active">
+                        <a class="nav-link" href="contact.php">Contact Us <span class="sr-only">(current)</span></a>
+                    </li>
+                    <li class="nav-item active">
                         <a class="nav-link" href="book_a_flight.php">Book a Flight <span class="sr-only">(current)</span></a>
                     </li>
                     <?php if ($loggedIn): ?>
                     <li class="nav-item">
-                        <a class="nav-link" href="profile_page.php">Profile</a>
+                        <a class="nav-link" href="booking_history.php">Book History</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="booking_history.php">Book History</a>
+                        <a class="nav-link" href="profile_page.php">Profile</a> <!--fixed profile page position-->
                     </li>
                     <?php endif; ?>
                 </ul>
@@ -697,7 +700,9 @@ mysqli_close($connection);
         }
 
         // NEW FUNCTION TO SAVE BOOKING DATA
+        // NEW FUNCTION TO SAVE BOOKING DATA
         function saveBookingData() {
+            // --- 1. Get all the booking data (same as before) ---
             let bookingData = {
                 origin_state: document.getElementById("origin_state").value,
                 origin_country: document.getElementById("origin_country").value,
@@ -710,13 +715,25 @@ mysqli_close($connection);
                 no_of_adult: document.getElementById("no_of_adult").value,
                 no_of_children: document.getElementById("no_of_children").value,
                 food_drinks: document.getElementById("food_drinks").checked ? "Yes" : "No",
-                // Corrected price calculations
-                book_ticket_price: document.getElementById("ticketPrice").value, // Use a new hidden field for ticket price
-                book_food_drink_price: document.getElementById("foodDrinkPrice").value, // Use a new hidden field for food and drink price
+                book_ticket_price: document.getElementById("ticketPrice").value,
+                book_food_drink_price: document.getElementById("foodDrinkPrice").value,
                 book_total_price: document.getElementById("resPrice").textContent
             };
-            
-            // 2. Send the data to the server using fetch
+
+            // --- 2. Get the modal elements ---
+            const modal = document.getElementById('messageModal');
+            const modalTitle = document.getElementById('messageTitle');
+            const modalText = document.getElementById('messageText');
+            const modalButton = modal.querySelector('.message-modal-content button');
+
+            // --- 3. Show a "Processing" message ---
+            modalTitle.textContent = 'Payment Approved';
+            modalText.innerHTML = 'Please wait, we are saving your booking...';
+            modalButton.style.display = 'none'; // Hide the "OK" button
+            modal.style.display = 'flex';
+
+
+            // --- 4. Send the data to the server (same as before) ---
             fetch('user_booking_process.php', {
                     method: 'POST',
                     headers: {
@@ -727,15 +744,29 @@ mysqli_close($connection);
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // Redirect to the review page with the new bookId
-                        window.location.href = 'review_page.php?bookId=' + data.bookId;
+                        // --- 5. Show Success Message ---
+                        modalTitle.textContent = 'Success!';
+                        modalText.innerHTML = 'Your booking is confirmed. We are now preparing your review page...';
+                        // (Button remains hidden)
+
+                        setTimeout(function() {
+                            // Redirect to the review page after 3 seconds
+                            window.location.href = 'review_page.php?bookId=' + data.bookId;
+                        }, 3000); // 3-second delay
+
                     } else {
-                        showMessage('Booking Failed', data.message || 'An unexpected error occurred. Please contact support.');
+                        // --- 6. Show Booking Failed Error ---
+                        modalTitle.textContent = 'Booking Failed';
+                        modalText.innerHTML = data.message || 'An unexpected error occurred. Please contact support.';
+                        modalButton.style.display = 'block'; // Show the "OK" button again
                     }
                 })
                 .catch(error => {
+                    // --- 7. Show Connection Error ---
                     console.error('Error:', error);
-                    showMessage('Connection Error', 'Could not connect to the server to save your booking. Please check your internet connection and try again.');
+                    modalTitle.textContent = 'Connection Error';
+                    modalText.innerHTML = 'Could not connect to the server to save your booking. Please check your internet connection and try again.';
+                    modalButton.style.display = 'block'; // Show the "OK" button
                 });
         }
 
@@ -788,7 +819,7 @@ mysqli_close($connection);
                 markerTo = L.marker([3.1390, 101.6869]).addTo(mapTo);
 
                 function reverseGeocode(lat, lng, inputId) {
-                    fetch(`nomimatim_proxy.php?lat=${lat}&lon=${lng}`)
+                    fetch(`nomimatim_proxy.php?lat=${lat}&lon=${lng}&accept-language=en`) //translate to english to non-english speaking country.
                         .then(res => res.json())
                         .then(data => {
                             if (data && data.address) {
@@ -832,7 +863,7 @@ mysqli_close($connection);
                         return;
                     }
 
-                    fetch(`search_proxy.php?q=${encodeURIComponent(finalQuery)}`)
+                    fetch(`search_proxy.php?q=${encodeURIComponent(finalQuery)}&accept-language=en`) //translate to english on non-english speaking country
                         .then(res => res.json())
                         .then(data => {
                             if (data && data.length > 0) {

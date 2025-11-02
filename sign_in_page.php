@@ -41,9 +41,6 @@ if (isset($_POST['signup'])) {
         $errors[] = "Email is required.";
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors[] = "Invalid email format.";
-    } elseif (strpos($email, '@gmail.com') === false) {
-        // This check is very restrictive; consider if you truly only want Gmail
-        $errors[] = "Only Gmail addresses are allowed.";
     } else {
         // Check if email already exists in the database (important for sign-up)
         $check_email_sql = "SELECT book_id FROM BookUser WHERE book_email = ?";
@@ -362,8 +359,16 @@ $profilePictureUrl = $defaultProfilePicture;
         .error-message {
             color: #dc3545;
             margin-top: 10px;
-            text-align: center;
+            text-align: left; /* Changed for better readability */
+            padding: 10px;
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.5);
+            border-radius: 5px;
         }
+         .error-message p {
+             margin-bottom: 5px;
+         }
+
         .success-message {
             color: #28a745;
             margin-top: 10px;
@@ -478,9 +483,9 @@ $profilePictureUrl = $defaultProfilePicture;
                 if (!empty($errors)) {
                     echo "<div class='error-message'>";
                     foreach ($errors as $error) {
-                        echo "<p>" . htmlspecialchars($error) . "</p>"; // Use htmlspecialchars when outputting errors
+                        echo "<p><i class='fas fa-exclamation-circle'></i> " . htmlspecialchars($error) . "</p>"; // Use htmlspecialchars when outputting errors
                     }
-                    echo "</div>";
+                    echo "</div><br>"; // Added a break for spacing
                 }
                 // Display success message if set
                 if (!empty($success_message)) {
@@ -495,7 +500,7 @@ $profilePictureUrl = $defaultProfilePicture;
                 <div class="form-group">
                     <label for="email">Email:</label>
                     <div class="d-flex align-items-center">
-                        <input type="email" class="form-control" id="email" name="email" placeholder="johndoe@gmail.com" required value="<?php echo $email_value; ?>">
+                        <input type="email" class="form-control" id="email" name="email" placeholder="johndoe@example.com" required value="<?php echo $email_value; ?>">
                         <button class="btn btn-primary" type="button" name="getcodebutton" id="getcodebutton">Send</button>
                     </div>
                     <br>
@@ -524,7 +529,7 @@ $profilePictureUrl = $defaultProfilePicture;
         </div>
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 
@@ -560,7 +565,8 @@ $profilePictureUrl = $defaultProfilePicture;
                     } else {
                         clearInterval(timer);
                         getCodeButton.disabled = false;
-                        getCodeCodeButton.textContent = 'Send';
+                        // --- FIX 1: Corrected variable typo ---
+                        getCodeButton.textContent = 'Send';
                     }
                 }, 1000);
 
@@ -577,7 +583,8 @@ $profilePictureUrl = $defaultProfilePicture;
                         alert(data.message + ' (Code for debugging: ' + receivedCode + ')'); // debugging purposes only, ignore.
                     } else {
                         // error handling.
-                        alert('Error: ' + data.message);
+                        // --- FIX 2: Corrected JS syntax error and restored dynamic error message ---
+                        alert('Error: ' + data.message); 
                         clearInterval(timer);
                         getCodeButton.disabled = false;
                         getCodeButton.textContent = 'Send';

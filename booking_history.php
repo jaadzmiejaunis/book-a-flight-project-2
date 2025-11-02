@@ -384,15 +384,18 @@ mysqli_close($connection);
                     <li class="nav-item">
                         <a class="nav-link" href="about.php">About</a>
                     </li>
+                    <li class="nav-item active">
+                        <a class="nav-link" href="contact.php">Contact Us <span class="sr-only">(current)</span></a>
+                    </li>
                     <li class="nav-item">
                          <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
                     </li>
                      <?php if ($loggedIn): ?>
-                     <li class="nav-item">
-                         <a class="nav-link" href="profile_page.php">Profile</a>
-                     </li>
                       <li class="nav-item active">
                          <a class="nav-link" href="booking_history.php">Book History <span class="sr-only">(current)</span></a>
+                     </li>
+                     <li class="nav-item">
+                         <a class="nav-link" href="profile_page.php">Profile</a><!--Fixed profile page position-->
                      </li>
                      <?php endif; ?>
                 </ul>

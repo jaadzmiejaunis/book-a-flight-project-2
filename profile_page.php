@@ -479,6 +479,12 @@ if (empty($navbarProfilePictureUrl)) {
                         <li class="nav-item">
                             <a class="nav-link" href="admin_account_manager.php">Account Manager</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_staff_salary.php">Staff Salary</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="admin_salary_report.php">Salary Report</a>
+                        </li>
                         <li class="nav-item active">
                             <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
                         </li>
@@ -496,6 +502,9 @@ if (empty($navbarProfilePictureUrl)) {
                             <a class="nav-link" href="profile_page.php">Profile <span class="sr-only">(current)</span></a>
                         </li>
                     <?php elseif ($user_role === 'Customer'): ?>
+                        <li class="nav-item active">
+                        <a class="nav-link" href="contact.php">Contact Us <span class="sr-only">(current)</span></a>
+                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
                         </li>

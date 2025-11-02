@@ -61,10 +61,30 @@ $allowed_columns = ['booking_id_formatted', 'book_username', 'book_origin_state'
 $sort_column = in_array($sort_column, $allowed_columns) ? $sort_column : 'booking_date';
 $sort_order = $sort_order === 'asc' ? 'asc' : 'desc';
 
+// --- Pagination Setup ---
+$limit = 10; // Number of items per page
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$page = max($page, 1);
+$offset = ($page - 1) * $limit;
+
 // --- Fetch Booking Data ---
 $booking_data = [];
 $error_message = '';
 $total_revenue = 0;
+
+// --- Get Total Count for Pagination ---
+$sql_total = "SELECT COUNT(DISTINCT bs.status_id)
+              FROM BookFlightStatus bs
+              WHERE bs.booking_status = 'Booked' 
+              AND DATE_FORMAT(bs.booking_date, '%Y-%m') = ?";
+
+$total_stmt = mysqli_prepare($connection, $sql_total);
+mysqli_stmt_bind_param($total_stmt, "s", $selected_month);
+mysqli_stmt_execute($total_stmt);
+$total_result = mysqli_stmt_get_result($total_stmt);
+$total_rows = mysqli_fetch_array($total_result)[0];
+$total_pages = ceil($total_rows / $limit);
+mysqli_stmt_close($total_stmt);
 
 // SQL query to get booking data
 $sql = "SELECT 
@@ -96,17 +116,20 @@ LEFT JOIN BookFlightPassenger bp ON bs.book_id = bp.book_id AND bs.user_id = bp.
 LEFT JOIN BookFlightPrice bpr ON bs.book_id = bpr.book_id AND bs.user_id = bpr.user_id
 WHERE bs.booking_status = 'Booked' 
 AND DATE_FORMAT(bs.booking_date, '%Y-%m') = ?
-ORDER BY $sort_column $sort_order";
+ORDER BY $sort_column $sort_order
+LIMIT ? OFFSET ?";
 
 if ($stmt = mysqli_prepare($connection, $sql)) {
-    mysqli_stmt_bind_param($stmt, "s", $selected_month);
+    // Bind month, limit, and offset
+    mysqli_stmt_bind_param($stmt, "sii", $selected_month, $limit, $offset);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
 
     if ($result) {
         while ($row = mysqli_fetch_assoc($result)) {
             $booking_data[] = $row;
-            $total_revenue += $row['book_price'];
+            // Note: Total revenue should be calculated from ALL bookings, not just this page
+            // We'll calculate total revenue with a separate query for accuracy.
         }
         mysqli_free_result($result);
     } else {
@@ -117,6 +140,21 @@ if ($stmt = mysqli_prepare($connection, $sql)) {
 } else {
     $error_message = "Error preparing query: " . mysqli_error($connection);
 }
+
+// Get Total Revenue for the selected month (un-paginated)
+$revenue_sql = "SELECT SUM(book_price) as total 
+                FROM BookFlightStatus 
+                WHERE booking_status = 'Booked' 
+                AND DATE_FORMAT(booking_date, '%Y-%m') = ?";
+if ($revenue_stmt = mysqli_prepare($connection, $revenue_sql)) {
+    mysqli_stmt_bind_param($revenue_stmt, "s", $selected_month);
+    mysqli_stmt_execute($revenue_stmt);
+    $revenue_result = mysqli_stmt_get_result($revenue_stmt);
+    $revenue_row = mysqli_fetch_assoc($revenue_result);
+    $total_revenue = $revenue_row['total'] ?? 0;
+    mysqli_stmt_close($revenue_stmt);
+}
+
 
 // Get available months for navigation
 $months_sql = "SELECT DISTINCT DATE_FORMAT(booking_date, '%Y-%m') as month FROM BookFlightStatus WHERE booking_status = 'Booked' ORDER BY month DESC";
@@ -135,6 +173,7 @@ function getSortUrl($column, $current_sort, $current_order, $month) {
     if ($current_sort === $column && $current_order === 'asc') {
         $order = 'desc';
     }
+    // Sorting resets to page 1
     return "staff_sales_table.php?month=$month&sort=$column&order=$order";
 }
 
@@ -145,6 +184,9 @@ function getSortIndicator($column, $current_sort, $current_order) {
     }
     return '';
 }
+
+// Get the current page filename for active nav link
+$current_page_name = basename($_SERVER['PHP_SELF']);
 ?>
 
 <!DOCTYPE html>
@@ -195,9 +237,18 @@ function getSortIndicator($column, $current_sort, $current_order) {
             text-decoration: none;
             margin-right: auto;
             white-space: nowrap;
+            display: flex;
+            align-items: center;
         }
         .top-gradient-bar .site-title:hover {
             text-decoration: underline;
+        }
+        
+        .top-gradient-bar .site-title .sierraflight-logo {
+            width: 150px;
+            height: auto;
+            margin-right: 10px;
+            vertical-align: middle;
         }
 
         .top-gradient-bar .user-info {
@@ -288,8 +339,9 @@ function getSortIndicator($column, $current_sort, $current_order) {
             text-decoration: underline;
             color: white !important;
         }
-
-        .navbar-nav .nav-link:active {
+        
+        .navbar-nav .nav-link:active,
+        .navbar-nav .nav-item.active .nav-link {
             background-color: rgba(255, 255, 255, 0.2);
         }
 
@@ -422,7 +474,7 @@ function getSortIndicator($column, $current_sort, $current_order) {
             background-color: #343a40;
         }
 
-        .no-bookings {
+        .no-data {
             text-align: center;
             color: #ccc;
             margin-top: 20px;
@@ -431,13 +483,39 @@ function getSortIndicator($column, $current_sort, $current_order) {
             border-radius: 8px;
         }
         
+        /* PAGINATION CSS */
+        .pagination {
+            justify-content: center;
+        }
+        .pagination .page-item .page-link {
+            background-color: #3a3e52;
+            border-color: #5a5a8a;
+            color: #e0e0e0;
+            margin: 0 2px;
+            border-radius: 4px;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #ffb03a;
+            border-color: #ffb03a;
+            color: #1e1e2d;
+            font-weight: bold;
+        }
+        .pagination .page-item.disabled .page-link {
+            background-color: #282b3c;
+            border-color: #5a5a8a;
+            color: #6c757d;
+        }
+        .pagination .page-item .page-link:hover {
+            background-color: #5a6268;
+        }
+        
         /* Print Styles */
         @media print {
             body {
                 background-color: #fff;
                 color: #000;
             }
-            .top-gradient-bar, .navbar, .print-button, .month-navigation, .page-actions {
+            .top-gradient-bar, .navbar, .print-button, .month-navigation, .page-actions, .pagination {
                 display: none;
             }
             .container.page-content, .admin-container {
@@ -471,6 +549,9 @@ function getSortIndicator($column, $current_sort, $current_order) {
             .sales-table td {
                 vertical-align: top;
             }
+            .sales-table tfoot tr td {
+                font-weight: bold;
+            }
         }
     </style>
 </head>
@@ -478,7 +559,10 @@ function getSortIndicator($column, $current_sort, $current_order) {
 
     <div class="top-gradient-bar">
         <div class="container">
-            <a href="homepage.php" class="site-title">SierraFlight (Staff)</a>
+            <a href="homepage.php" class="site-title">
+                <img src="image_website/website_image/sierraflight_logo.png" class="sierraflight-logo" alt="SierraFlight Logo">
+                <span>(Staff)</span>
+            </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
                     <span>Welcome, <?php echo $username; ?>!</span>
@@ -501,25 +585,30 @@ function getSortIndicator($column, $current_sort, $current_order) {
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+                <?php
+                    // Define nav items from staff_sales_report.php
+                    $nav_items = [
+                        'homepage.php' => 'Home',
+                        'about.php' => 'About',
+                        'staff_sales_report.php' => 'Sales Report',
+                        'staff_booking_status.php' => 'View Booking Status',
+                        'staff_user_feedback.php' => 'User Feedback',
+                        'profile_page.php' => 'Profile'
+                    ];
+                    
+                    // Set active page based on the current file name
+                    // This will NOT highlight "Sales Report"
+                    $active_page = $current_page_name;
+                ?>
                 <ul class="navbar-nav mr-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="homepage.php">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="about.php">About</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="staff_sales_report.php">Sales Analytics</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="staff_sales_table.php">Booking Details</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="staff_booking_status.php">View Booking Status</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="admin_booking_list.php">User Feedback</a>
-                    </li>
+                    <?php foreach ($nav_items as $url => $title): ?>
+                        <li class="nav-item <?php echo ($active_page == $url) ? 'active' : ''; ?>">
+                            <a class="nav-link" href="<?php echo $url; ?>">
+                                <?php echo $title; ?>
+                                <?php echo ($active_page == $url) ? '<span class="sr-only">(current)</span>' : ''; ?>
+                            </a>
+                        </li>
+                    <?php endforeach; ?>
                 </ul>
             </div>
         </div>
@@ -531,12 +620,12 @@ function getSortIndicator($column, $current_sort, $current_order) {
                 Booking Details - <?php echo $month_name; ?>
             </div>
 
-            <!-- Month Navigation -->
             <div class="month-navigation">
                 <?php foreach ($available_months as $month): ?>
                     <?php
                     $month_display = date('F Y', strtotime($month));
                     $is_active = $month === $selected_month ? 'active' : '';
+                    // Month links reset to page 1
                     ?>
                     <a href="staff_sales_table.php?month=<?php echo $month; ?>" 
                        class="month-link <?php echo $is_active; ?>">
@@ -545,7 +634,6 @@ function getSortIndicator($column, $current_sort, $current_order) {
                 <?php endforeach; ?>
             </div>
 
-            <!-- Page Actions -->
             <div class="page-actions">
                 <a href="staff_sales_report.php?month=<?php echo $selected_month; ?>" class="page-action-btn">
                     <i class="fas fa-chart-bar"></i> View Analytics
@@ -562,7 +650,6 @@ function getSortIndicator($column, $current_sort, $current_order) {
             <?php endif; ?>
 
             <?php if (!empty($booking_data)): ?>
-                <!-- Detailed Booking Table -->
                 <button onclick="window.print()" class="btn btn-primary print-button">
                     <i class="fas fa-print"></i> Print Report
                 </button>
@@ -633,7 +720,7 @@ function getSortIndicator($column, $current_sort, $current_order) {
                         </tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="10" style="text-align: right; font-weight: bold;">Total Revenue:</td>
+                                <td colspan="10" style="text-align: right; font-weight: bold;">Total Revenue (This Month):</td>
                                 <td colspan="2" style="font-weight: bold; color: #ffb03a;">
                                     RM <?php echo number_format($total_revenue, 2); ?>
                                 </td>
@@ -641,8 +728,45 @@ function getSortIndicator($column, $current_sort, $current_order) {
                         </tfoot>
                     </table>
                 </div>
+
+                <?php if ($total_pages > 1): ?>
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination">
+                            <?php
+                                // Base URL for pagination links, preserving month and sort order
+                                $base_url = "staff_sales_table.php?month=" . urlencode($selected_month) . "&sort=" . urlencode($sort_column) . "&order=" . urlencode($sort_order);
+                            ?>
+                            <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="<?php echo ($page > 1) ? $base_url . '&page=' . ($page - 1) : '#'; ?>">Previous</a>
+                            </li>
+
+                            <?php 
+                            $window = 2; // How many pages to show around the current page
+                            for ($i = 1; $i <= $total_pages; $i++):
+                                if ($i == 1 || $i == $total_pages || ($i >= $page - $window && $i <= $page + $window)):
+                            ?>
+                                <li class="page-item <?php echo ($i == $page) ? 'active' : ''; ?>">
+                                    <a class="page-link" href="<?php echo $base_url . '&page=' . $i; ?>"><?php echo $i; ?></a>
+                                </li>
+                            <?php 
+                                // Show '...' for gaps
+                                elseif ($i == $page - $window - 1 || $i == $page + $window + 1):
+                            ?>
+                                <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                            <?php 
+                                endif;
+                            endfor; 
+                            ?>
+
+                            <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="<?php echo ($page < $total_pages) ? $base_url . '&page=' . ($page + 1) : '#'; ?>">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+                
             <?php else: ?>
-                <div class="no-bookings">
+                <div class="no-data">
                     <i class="fas fa-table fa-3x mb-3" style="color: #ffb03a;"></i>
                     <h4>No Bookings Found</h4>
                     <p>No completed bookings found for <?php echo $month_name; ?>.</p>

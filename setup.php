@@ -5,19 +5,20 @@
     $connection = new mysqli($db_host, $db_user, $db_pass);
 
     if($connection->connect_error) {
-        die("Connection failed: " . $connection->connect_error);
+        die("Connection failed: ". $connection->connect_error);
     }
 
     // Create DB
-    $sql = "CREATE DATABASE IF NOT EXISTS " . $db_name;
+    $sql = "CREATE DATABASE IF NOT EXISTS ". $db_name;
     if($connection->query($sql) === TRUE){
-        echo "Database " . $db_name . " created or already exists. <br>";
+        echo "Database ". $db_name. " created or already exists. <br>";
     } else {
-        die("Error creating database: " . $connection->error);
+        die("Error creating database: ". $connection->error);
     }
 
     $connection->select_db($db_name);
 
+    // --- MODIFICATION: Removed salary columns ---
     $sql_create_bookuser = "CREATE TABLE IF NOT EXISTS BookUser (
         book_id INT(11) AUTO_INCREMENT PRIMARY KEY,
         book_username VARCHAR(50) NOT NULL UNIQUE,
@@ -104,6 +105,34 @@
         FOREIGN KEY (user_id) REFERENCES BookUser(book_id) ON DELETE CASCADE,
         FOREIGN KEY (book_id) REFERENCES BookFlightStatus(book_id) ON DELETE CASCADE
     );";
+
+    $sql_create_password_resets = "CREATE TABLE IF NOT EXISTS password_resets (
+        id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(100) NOT NULL,
+        token VARCHAR(64) NOT NULL,
+        expires DATETIME NOT NULL,
+        KEY (email),
+        KEY (token)
+    );";
+
+    // --- MODIFICATION: Added earned_salary column ---
+    $sql_create_staffsessions = "CREATE TABLE IF NOT EXISTS StaffSessions (
+        session_id INT(11) AUTO_INCREMENT PRIMARY KEY,
+        user_id INT(11) NOT NULL,
+        login_time DATETIME NOT NULL,
+        logout_time DATETIME NULL,
+        duration_seconds INT(11) NULL,
+        earned_salary DECIMAL(10, 2) NULL,
+        FOREIGN KEY (user_id) REFERENCES BookUser(book_id) ON DELETE CASCADE
+    );";
+
+    // --- NEW TABLE: StaffDetails ---
+    $sql_create_staffdetails = "CREATE TABLE IF NOT EXISTS StaffDetails (
+        user_id INT(11) PRIMARY KEY,
+        hourly_rate DECIMAL(10, 2) NOT NULL DEFAULT 10.00,
+        total_salary DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+        FOREIGN KEY (user_id) REFERENCES BookUser(book_id) ON DELETE CASCADE
+    );";
     
     $queries = [
         'BookUser' => $sql_create_bookuser,
@@ -112,14 +141,17 @@
         'BookFlightPassenger' => $sql_create_bookflightpassenger,
         'BookFlightPrice' => $sql_create_bookflightprice,
         'BookHistory' => $sql_create_bookhistory,
-        'BookReviews' => $sql_create_bookreviews
+        'BookReviews' => $sql_create_bookreviews,
+        'password_resets' => $sql_create_password_resets, 
+        'StaffSessions' => $sql_create_staffsessions,
+        'StaffDetails' => $sql_create_staffdetails // --- ADDED NEW TABLE ---
     ];
     
     foreach ($queries as $table_name => $sql_query) {
         if (mysqli_query($connection, $sql_query)) {
-            echo "Create {$table_name} table successfully <br>";
+            echo "Create/Update {$table_name} table successfully <br>";
         } else {
-            echo "Error creating {$table_name} table: " . mysqli_error($connection) . "<br>";
+            echo "Error creating/updating {$table_name} table: ". mysqli_error($connection). "<br>";
         }
     }
     

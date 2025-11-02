@@ -10,6 +10,12 @@ if (!$connection) {
 }
 // --- End Database Connection ---
 
+// --- Pagination Setup ---
+$limit = 10; // Number of bookings per page
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Get current page, default to 1
+$page = max($page, 1); // Ensure page is not less than 1
+$offset = ($page - 1) * $limit; // Calculate the offset for the SQL query
+
 // --- Staff Authentication and Data Retrieval ---
 $loggedIn = isset($_SESSION['book_id']);
 $username = 'Staff Member';
@@ -52,6 +58,15 @@ if ($loggedIn) {
 $booking_history = [];
 $error_message = '';
 
+// First, get the total number of bookings for pagination
+$sql_total = "SELECT COUNT(DISTINCT bs.status_id) 
+              FROM BookFlightStatus bs
+              LEFT JOIN BookFlightPlace fp ON bs.book_id = fp.book_id AND bs.user_id = fp.user_id";
+
+$total_result = mysqli_query($connection, $sql_total);
+$total_rows = mysqli_fetch_array($total_result)[0];
+$total_pages = ceil($total_rows / $limit);
+
 // Updated SQL query to get data from BookFlightStatus with location information
 $sql_history = "SELECT 
     bs.status_id,
@@ -72,10 +87,13 @@ $sql_history = "SELECT
     CONCAT('FL', LPAD(bs.status_id, 2, '0')) AS booking_id_formatted
 FROM BookFlightStatus bs
 LEFT JOIN BookFlightPlace fp ON bs.book_id = fp.book_id AND bs.user_id = fp.user_id
-ORDER BY bs.booking_date DESC";
+ORDER BY bs.booking_date DESC
+LIMIT ? OFFSET ?";
 
 // Use a prepared statement for security
 if ($stmt_history = mysqli_prepare($connection, $sql_history)) {
+    // Bind the limit and offset variables
+    mysqli_stmt_bind_param($stmt_history, "ii", $limit, $offset);
     mysqli_stmt_execute($stmt_history);
     $result_history = mysqli_stmt_get_result($stmt_history);
 
@@ -120,7 +138,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['status_id']) && isset
     mysqli_stmt_close($update_stmt);
     
     // Redirect to refresh the page and show message
-    header("Location: staff_booking_status.php");
+    $current_page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
+    $redirect_url = "staff_booking_status.php";
+    if ($current_page > 1) {
+        $redirect_url .= "?page=" . $current_page;
+    }
+    header("Location: " . $redirect_url);
     exit();
 }
 
@@ -167,7 +190,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_status_id'])) 
     }
     
     // Redirect to refresh the page and show message
-    header("Location: staff_booking_status.php");
+    $current_page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
+    $redirect_url = "staff_booking_status.php";
+    if ($current_page > 1) {
+        $redirect_url .= "?page=" . $current_page;
+    }
+    header("Location: " . $redirect_url);
     exit();
 }
 
@@ -458,6 +486,32 @@ unset($_SESSION['message_type']);
             background-color: #d1ecf1;
             border-color: #bee5eb;
         }
+        
+        /* PAGINATION CSS */
+        .pagination {
+            justify-content: center;
+        }
+        .pagination .page-item .page-link {
+            background-color: #3a3e52;
+            border-color: #5a5a8a;
+            color: #e0e0e0;
+            margin: 0 2px;
+            border-radius: 4px;
+        }
+        .pagination .page-item.active .page-link {
+            background-color: #ffb03a;
+            border-color: #ffb03a;
+            color: #1e1e2d;
+            font-weight: bold;
+        }
+        .pagination .page-item.disabled .page-link {
+            background-color: #282b3c;
+            border-color: #5a5a8a;
+            color: #6c757d;
+        }
+        .pagination .page-item .page-link:hover {
+            background-color: #5a6268;
+        }
     </style>
 </head>
 <body>
@@ -568,7 +622,7 @@ unset($_SESSION['message_type']);
                                     <td>
                                         <form method="post" style="display:inline-block;">
                                             <input type="hidden" name="status_id" value="<?php echo htmlspecialchars($booking['status_id']); ?>">
-                                            <select name="new_status" class="booking-status-select">
+                                            <input type="hidden" name="page" value="<?php echo htmlspecialchars($page); ?>"> <select name="new_status" class="booking-status-select">
                                                 <option value="Pending" <?php echo ($booking['booking_status'] === 'Pending') ? 'selected' : ''; ?>>Pending</option>
                                                 <option value="Booked" <?php echo ($booking['booking_status'] === 'Booked') ? 'selected' : ''; ?>>Booked</option>
                                                 <option value="Cancelled" <?php echo ($booking['booking_status'] === 'Cancelled') ? 'selected' : ''; ?>>Cancelled</option>
@@ -577,7 +631,7 @@ unset($_SESSION['message_type']);
                                         </form>
                                         <form method="post" style="display:inline-block;" onsubmit="return confirm('Are you sure you want to delete this booking?');">
                                             <input type="hidden" name="delete_status_id" value="<?php echo htmlspecialchars($booking['status_id']); ?>">
-                                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                                            <input type="hidden" name="page" value="<?php echo htmlspecialchars($page); ?>"> <button type="submit" class="btn btn-danger btn-sm">Delete</button>
                                         </form>
                                     </td>
                                 </tr>
@@ -585,7 +639,39 @@ unset($_SESSION['message_type']);
                         </tbody>
                     </table>
                 </div>
-            <?php else: ?>
+
+                <?php if ($total_pages > 1): ?>
+                    <nav aria-label="Page navigation" class="mt-4">
+                        <ul class="pagination">
+                            <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="<?php echo ($page > 1) ? '?page=' . ($page - 1) : '#'; ?>">Previous</a>
+                            </li>
+
+                            <?php 
+                            $window = 2; // How many pages to show around the current page
+                            for ($i = 1; $i <= $total_pages; $i++):
+                                if ($i == 1 || $i == $total_pages || ($i >= $page - $window && $i <= $page + $window)):
+                            ?>
+                                <li class="page-item <?php echo ($i == $page) ? 'active' : ''; ?>">
+                                    <a class="page-link" href="?page=<?php echo $i; ?>"><?php echo $i; ?></a>
+                                </li>
+                            <?php 
+                                // Show '...' for gaps
+                                elseif ($i == $page - $window - 1 || $i == $page + $window + 1):
+                            ?>
+                                <li class="page-item disabled"><a class="page-link" href="#">...</a></li>
+                            <?php 
+                                endif;
+                            endfor; 
+                            ?>
+
+                            <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="<?php echo ($page < $total_pages) ? '?page=' . ($page + 1) : '#'; ?>">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
+                <?php else: ?>
                 <p class="no-bookings">No user bookings found.</p>
             <?php endif; ?>
         </div>

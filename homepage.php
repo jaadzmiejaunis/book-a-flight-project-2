@@ -14,7 +14,6 @@ $five_star_reviews = []; // Initialize array for reviews
 // If a user is logged in, get their details from the database
 if ($loggedIn) {
     $user_id = $_SESSION['book_id'];
-    // --- MODIFICATION: Added book_user_status to the query ---
     $sql = "SELECT book_username, book_user_roles, book_profile, book_user_status FROM BookUser WHERE book_id = ?";
     if ($stmt = mysqli_prepare($connection, $sql)) {
         mysqli_stmt_bind_param($stmt, "i", $user_id);
@@ -22,21 +21,14 @@ if ($loggedIn) {
         $result = mysqli_stmt_get_result($stmt);
         if ($user = mysqli_fetch_assoc($result)) {
             
-            // --- MODIFICATION: Check if user status is 'Inactive' or 'Deactivated' ---
             if ($user['book_user_status'] === 'Inactive' || $user['book_user_status'] === 'Deactivated') {
-                // Log the user out completely
                 session_unset();
                 session_destroy();
-                
-                // Start a new session just to pass the error message
                 session_start();
                 $_SESSION['login_error'] = 'Your account is currently ' . strtolower($user['book_user_status']) . '. Please contact support for assistance.';
-                
-                // Redirect to login page
                 header('Location: login_page.php');
                 exit();
             }
-            // --- END MODIFICATION ---
 
             $username = htmlspecialchars($user['book_username']);
             $user_role = $user['book_user_roles'];
@@ -141,18 +133,29 @@ function get_html_head($title) {
             font-size: .95rem; line-height: 1.5; border-radius: .2rem; margin-left: 10px;
         }
         .navbar { background-color: #212529; padding: 0 20px; margin-bottom: 0; }
+        
         .navbar-nav .nav-link {
-            padding: 8px 15px; color: white !important;
+            padding: 8px 15px;
+            color: white !important;
             transition: background-color 0.3s ease, text-decoration 0.3s ease;
+            text-decoration: none;
+            background-color: transparent;
         }
         .navbar-nav .nav-link:hover {
             background-color: rgba(255, 255, 255, 0.1);
             text-decoration: underline;
-            color: white !important;
         }
+        .navbar-nav .nav-item.active .nav-link {
+            background-color: transparent !important;
+            text-decoration: none;
+        }
+        .navbar-nav .nav-link:active {
+            background-color: rgba(255, 255, 255, 0.2); 
+        }
+        
         .page-content {
             display: flex; align-items: center; justify-content: center;
-            flex-grow: 1; padding: 2rem 0; /* Changed padding */
+            flex-grow: 1; padding: 2rem 0;
         }
         .jumbotron {
             background-color: transparent; color: #e0e0e0; text-align: center;
@@ -176,6 +179,9 @@ function get_html_head($title) {
             box-shadow: 0 8px 16px rgba(0,0,0,0.4);
         }
         .staff-welcome-banner .text-content { padding: 2rem 3rem; text-align: left; }
+        /* This rule is for the customer/guest button */
+        .staff-welcome-banner .text-content p a.btn-lg { font-size: 1.2rem; }
+        
         .staff-welcome-banner .image-content img { width: 100%; height: 100%; object-fit: cover; display: block; }
         @media (max-width: 991.98px) {
             .staff-welcome-banner { flex-direction: column; text-align: center; }
@@ -257,8 +263,9 @@ function get_html_footer($loggedIn, $user_role) {
         $account_links = '<li><a href="login_page.php">Sign In / Register</a></li>
                           <li><a href="forgot_password.php">Forgot Password</a></li>';
     }
-    $sierraflight_links = '<li><a href="homepage.php">Home</a></li><li><a href="about.php">About Us</a></li>';
+    $sierraflight_links = '<li><a href="homepage.php">Home</a></li><li><a href="about.php">About Us</a></li><li><a href="contact.php">Contact Us</a></li>';
     $role_specific_column = '';
+    
     if ($user_role === 'Staff' || $user_role === 'Admin') {
         $panel_name = ($user_role === 'Staff') ? 'Staff Panel' : 'Admin Panel';
         $panel_links = '';
@@ -267,17 +274,14 @@ function get_html_footer($loggedIn, $user_role) {
                             <li><a href="staff_booking_status.php">View Booking Status</a></li>
                             <li><a href="staff_user_feedback.php">User Feedback</a></li>';
         } else {
-            // --- MODIFICATION: Added Employee Accounts and Account Manager links for Admin ---
-            $panel_links = '<li><a href="admin_flight_list.php">Flight List</a></li>
-                            <li><a href="admin_booking_list.php">Booking List</a></li>
-                            <li><a href="admin_employee_accounts.php">Employee Accounts</a></li>
-                            <li><a href="admin_account_manager.php">Account Manager</a></li>';
-            // --- End Modification ---
+            $panel_links = '<li><a href="admin_account_manager.php">Account Manager</a></li>
+                        <li><a href="admin_staff_salary.php">Staff Salary</a></li>
+                        <li><a href="admin_salary_report.php">Salary Report</a></li>';
         }
         $role_specific_column = "<div class='col-lg-3 col-md-6 mb-4'><h6>{$panel_name}</h6><ul class='list-unstyled'>{$panel_links}</ul></div>";
     } else {
         $sierraflight_links .= '<li><a href="book_a_flight.php">Book a Flight</a></li>';
-        $role_specific_column = '<div class="col-lg-3 col-md-6 mb-4"><h6>Support</h6><ul class="list-unstyled"><li><a href="#">Help Center</a></li></ul></div>';
+        $role_specific_column = '<div class="col-lg-3 col-md-6 mb-4"><h6>Support</h6><ul class="list-unstyled"><li><a href="contact.php">Help Center</a></li></ul></div>';
     }
     return <<<HTML
     <footer class="site-footer">
@@ -339,28 +343,27 @@ switch ($user_role) {
         echo get_html_head("{$role_title} Homepage - SierraFlight");
         $profile_image_html = '<img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav">';
         
-        // --- MODIFICATION: Added Employee Accounts and Account Manager links for Admin ---
         $nav_links = ($user_role === 'Admin') ? '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="admin_account_manager.php">Account Manager</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin_staff_salary.php">Staff Salary</a></li>
+                <li class="nav-item"><a class="nav-link" href="admin_salary_report.php">Salary Report</a></li>
                 <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>'
             : '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+                <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_sales_report.php">Sales Report</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">View Booking Status</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
                 <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
-        // --- End Modification ---
 
-        // --- MODIFICATION: Set different welcome images for Admin and Staff ---
         $welcome_image_html = '';
         if ($user_role === 'Admin') {
             $welcome_image_html = '<img src="image_website/website_image/sierraflight_admin_page.png" alt="Admin Dashboard View">';
         } else { // Staff
-            // NOTE: Using a different image for staff. Update this path if you have a different one.
             $welcome_image_html = '<img src="image_website/website_image/sierraflight_staff_page.png" alt="Staff Control Panel View">';
         }
-        // --- End Modification ---
 
         echo <<<HTML
         <div class="top-gradient-bar">
@@ -400,20 +403,35 @@ HTML;
         <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
             <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>
             <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
+            <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
             <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
 HTML;
         if ($loggedIn) {
-            echo '<li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
-                  <li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>';
+            echo '<li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>
+                    <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
         }
         echo '</ul></div></div></nav>';
         
-        // Main Jumbotron for Customers
-        echo '<main class="page-content"><div class="jumbotron"><div class="container">
-                <h1 class="display-4">Welcome to SierraFlight!</h1>
-                <p class="lead">Find and book your next flight with ease.</p>
-                <p><a class="btn btn-primary btn-lg" href="book_a_flight.php" role="button">Book a Flight Now</a></p>
-              </div></div></main>';
+        // --- MODIFICATION: Replaced Jumbotron with Welcome Banner ---
+        // You will need to add an image at this path: 'image_website/website_image/sierraflight_customer_page.png'
+        $welcome_image_html = '<img src="image_website/website_image/sierraflight_customer_page.png" alt="Plane window view">';
+        $welcome_title = $loggedIn ? "Welcome, {$username}!" : "Welcome to SierraFlight!";
+        $welcome_subtitle = $loggedIn ? "Find and book your next flight with ease." : "Sign in or register to manage your bookings.";
+        $button_html = $loggedIn ? 
+            '<p><a class="btn btn-primary btn-lg" href="book_a_flight.php" role="button">Book a Flight Now</a></p>' : 
+            '<p><a class="btn btn-primary btn-lg" href="login_page.php" role="button">Login / Register</a></p>';
+
+        echo <<<HTML
+        <main class="page-content"><div class="container"><div class="row staff-welcome-banner">
+            <div class="col-lg-6 text-content">
+                <h1 class="display-4">{$welcome_title}</h1>
+                <p class="lead">{$welcome_subtitle}</p>
+                {$button_html}
+            </div>
+            <div class="col-lg-6 p-0 image-content">{$welcome_image_html}</div>
+        </div></div></main>
+        HTML;
+        // --- END MODIFICATION ---
 
         // Display the review carousel only if there are reviews
         if (!empty($five_star_reviews)) {
@@ -459,4 +477,3 @@ HTML;
         break;
 }
 ?>
-
