@@ -138,61 +138,64 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
         }
 
         .navbar {
-            background-color: #212529;
-            padding: 0 20px;
-            margin-bottom: 0;
-        }
-        .navbar > .container {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            max-width: 1140px;
-            margin: 0 auto;
-            padding: 0;
-        }
-        .navbar-toggler {
-            display: none;
-        }
-        @media (max-width: 991.98px) {
-            .navbar-toggler {
-                display: block;
-                padding: .25rem .75rem;
-                font-size: 1.25rem;
-                line-height: 1;
-                background-color: transparent;
-                border: 1px solid rgba(255, 255, 255, .1);
-                border-radius: .25rem;
-            }
-            .navbar-collapse {
-                background-color: #212529;
-                padding: 10px;
-            }
-            .navbar > .container {
-                justify-content: space-between;
-            }
-            .navbar-collapse {
-                flex-grow: 1;
-            }
-        }
-        
-        .navbar-nav .nav-link {
-            padding: 8px 15px;
-            color: white !important;
-            transition: background-color 0.3s ease, text-decoration 0.3s ease;
-            text-decoration: none;
-            background-color: transparent;
-        }
-        .navbar-nav .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            text-decoration: underline;
-        }
-        .navbar-nav .nav-item.active .nav-link {
-            background-color: transparent !important;
-            text-decoration: none;
-        }
-        .navbar-nav .nav-link:active {
-            background-color: rgba(255, 255, 255, 0.2); 
-        }
+             background-color: #212529;
+             padding: 0 20px;
+             margin-bottom: 0;
+             background-image: none;
+             box-shadow: none;
+             min-height: auto;
+         }
+
+         .navbar > .container {
+              display: flex;
+              align-items: center;
+              width: 100%;
+              max-width: 1140px;
+              margin: 0 auto;
+              padding: 0;
+         }
+
+         .navbar-brand,
+         .navbar-toggler {
+             display: none;
+         }
+          @media (max-width: 991.98px) {
+              .navbar-toggler {
+                  display: block;
+                  padding: .25rem .75rem;
+                  font-size: 1.25rem;
+                  line-height: 1;
+                  background-color: transparent;
+                  border: 1px solid rgba(255, 255, 255, .1);
+                  border-radius: .25rem;
+              }
+               .navbar-collapse {
+                   background-color: #212529;
+                   padding: 10px;
+               }
+                .navbar > .container {
+                    justify-content: space-between;
+               }
+                .navbar-collapse {
+                     flex-grow: 1;
+                }
+           }
+
+         .navbar-nav .nav-link {
+              padding: 8px 15px;
+              color: white !important;
+              transition: background-color 0.3s ease, text-decoration 0.3s ease;
+         }
+
+         .navbar-nav .nav-link:hover {
+             background-color: rgba(255, 255, 255, 0.1);
+             text-decoration: underline;
+             color: white !important;
+         }
+
+         .navbar-nav .nav-link:active {
+              background-color: rgba(255, 255, 255, 0.2);
+         }
 
         .page-content {
             padding: 20px;

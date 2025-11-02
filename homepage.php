@@ -132,26 +132,65 @@ function get_html_head($title) {
             background-color: #dc3545; border-color: #dc3545; padding: .3rem .6rem;
             font-size: .95rem; line-height: 1.5; border-radius: .2rem; margin-left: 10px;
         }
-        .navbar { background-color: #212529; padding: 0 20px; margin-bottom: 0; }
-        
-        .navbar-nav .nav-link {
-            padding: 8px 15px;
-            color: white !important;
-            transition: background-color 0.3s ease, text-decoration 0.3s ease;
-            text-decoration: none;
-            background-color: transparent;
-        }
-        .navbar-nav .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            text-decoration: underline;
-        }
-        .navbar-nav .nav-item.active .nav-link {
-            background-color: transparent !important;
-            text-decoration: none;
-        }
-        .navbar-nav .nav-link:active {
-            background-color: rgba(255, 255, 255, 0.2); 
-        }
+        .navbar {
+             background-color: #212529;
+             padding: 0 20px;
+             margin-bottom: 0;
+             background-image: none;
+             box-shadow: none;
+             min-height: auto;
+         }
+
+         .navbar > .container {
+              display: flex;
+              align-items: center;
+              width: 100%;
+              max-width: 1140px;
+              margin: 0 auto;
+              padding: 0;
+         }
+
+         .navbar-brand,
+         .navbar-toggler {
+             display: none;
+         }
+          @media (max-width: 991.98px) {
+              .navbar-toggler {
+                  display: block;
+                  padding: .25rem .75rem;
+                  font-size: 1.25rem;
+                  line-height: 1;
+                  background-color: transparent;
+                  border: 1px solid rgba(255, 255, 255, .1);
+                  border-radius: .25rem;
+              }
+               .navbar-collapse {
+                   background-color: #212529;
+                   padding: 10px;
+               }
+                .navbar > .container {
+                    justify-content: space-between;
+               }
+                .navbar-collapse {
+                     flex-grow: 1;
+                }
+           }
+
+         .navbar-nav .nav-link {
+              padding: 8px 15px;
+              color: white !important;
+              transition: background-color 0.3s ease, text-decoration 0.3s ease;
+         }
+
+         .navbar-nav .nav-link:hover {
+             background-color: rgba(255, 255, 255, 0.1);
+             text-decoration: underline;
+             color: white !important;
+         }
+
+         .navbar-nav .nav-link:active {
+              background-color: rgba(255, 255, 255, 0.2);
+         }
         
         .page-content {
             display: flex; align-items: center; justify-content: center;
@@ -179,7 +218,6 @@ function get_html_head($title) {
             box-shadow: 0 8px 16px rgba(0,0,0,0.4);
         }
         .staff-welcome-banner .text-content { padding: 2rem 3rem; text-align: left; }
-        /* This rule is for the customer/guest button */
         .staff-welcome-banner .text-content p a.btn-lg { font-size: 1.2rem; }
         
         .staff-welcome-banner .image-content img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -187,8 +225,6 @@ function get_html_head($title) {
             .staff-welcome-banner { flex-direction: column; text-align: center; }
             .staff-welcome-banner .text-content { text-align: center; }
         }
-
-        /* Review Carousel Section */
         .review-carousel-section {
             background-color: #212529;
             padding: 4rem 0;
@@ -223,7 +259,6 @@ function get_html_head($title) {
         #reviewCarousel .carousel-indicators li {
             background-color: #ffb03a;
         }
-
         .site-footer {
             background-color: #212529;
             color: #a0a0a0; padding: 4rem 0; border-top: none;
@@ -345,14 +380,12 @@ switch ($user_role) {
         
         $nav_links = ($user_role === 'Admin') ? '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="admin_account_manager.php">Account Manager</a></li>
                 <li class="nav-item"><a class="nav-link" href="admin_staff_salary.php">Staff Salary</a></li>
                 <li class="nav-item"><a class="nav-link" href="admin_salary_report.php">Salary Report</a></li>
                 <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>'
             : '
                 <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_sales_report.php">Sales Report</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">View Booking Status</a></li>
                 <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
