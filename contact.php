@@ -112,8 +112,7 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
         .top-gradient-bar .user-info span {
             margin-right: 8px;
         }
-        .top-gradient-bar .profile-picture-nav,
-        .top-gradient-bar .profile-icon-nav {
+        .top-gradient-bar .profile-picture-nav {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -121,11 +120,6 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
             vertical-align: middle;
             object-fit: cover;
             border: 1px solid white;
-        }
-        .top-gradient-bar .profile-icon-nav {
-            border: none;
-            font-size: 36px;
-            color: white;
         }
         .top-gradient-bar .btn-danger {
             background-color: #dc3545;
@@ -286,17 +280,15 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
             </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
-                <a href="profile_page.php">
                     <span>Welcome, <?php echo $username; ?>!</span>
-                    <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
-                    <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                    <?php else: ?>
-                    <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                    <?php endif; ?>
-                </a>
-                <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
+                    
+                    <a href="profile_page.php">
+                        <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
+                    </a>
+                    
+                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php else: ?>
-                <a href="login_page.php" class="nav-link">Login/Sign Up</a>
+                    <a href="login_page.php" class="nav-link">Login/Sign Up</a>
                 <?php endif; ?>
             </div>
         </div>

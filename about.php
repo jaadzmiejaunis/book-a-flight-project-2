@@ -145,8 +145,7 @@ if ($user_role === 'Admin') {
             margin-right: 8px;
         }
 
-        .top-gradient-bar .profile-picture-nav,
-        .top-gradient-bar .profile-icon-nav {
+        .top-gradient-bar .profile-picture-nav {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -154,12 +153,6 @@ if ($user_role === 'Admin') {
             vertical-align: middle;
             object-fit: cover;
             border: 1px solid white;
-        }
-
-        .top-gradient-bar .profile-icon-nav {
-            border: none;
-            font-size: 36px;
-            color: white;
         }
 
         .top-gradient-bar .btn-danger {
@@ -283,17 +276,15 @@ if ($user_role === 'Admin') {
             </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
-                <a href="profile_page.php">
                     <span>Welcome, <?php echo $username; ?>!</span>
-                    <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
-                    <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                    <?php else: ?>
-                    <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                    <?php endif; ?>
-                </a>
-                <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
+                    
+                    <a href="profile_page.php">
+                        <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
+                    </a>
+                    
+                    <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php else: ?>
-                <a href="login_page.php" class="nav-link">Login/Sign Up</a>
+                    <a href="login_page.php" class="nav-link">Login/Sign Up</a>
                 <?php endif; ?>
             </div>
         </div>
@@ -311,9 +302,6 @@ if ($user_role === 'Admin') {
                     </li>
                     <li class="nav-item active">
                         <a class="nav-link" href="about.php">About <span class="sr-only">(current)</span></a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="contact.php">Contact Us</a>
                     </li>
                     
                     <?php if ($user_role === 'Admin'): ?>
@@ -344,6 +332,9 @@ if ($user_role === 'Admin') {
                         </li>
                     <?php elseif ($user_role === 'Customer'): ?>
                         <li class="nav-item">
+                        <a class="nav-link" href="contact.php">Contact Us</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
                         </li>
                         <li class="nav-item">
@@ -370,7 +361,6 @@ if ($user_role === 'Admin') {
                     <h3>Admin Responsibilities:</h3>
                     <ul>
                         <li>Manage user accounts, roles, and statuses.</li>
-                        <li>Monitor site performance and user activity.</li>
                         <li>Handle critical booking issues and data management.</li>
                         <li>Access comprehensive analytics and reports.</li>
                     </ul>

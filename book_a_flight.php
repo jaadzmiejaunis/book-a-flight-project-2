@@ -11,9 +11,34 @@ if (!$connection) {
 }
 
 $loggedIn = isset($_SESSION['book_id']);
-$username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest';
-$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
-$profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
+$username = 'Guest';
+$user_role = 'Guest'; // Added this for consistency
+
+// Define the default profile picture path
+$defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png'; 
+$profilePictureUrl = $defaultProfilePicture; // Set default value
+
+if ($loggedIn && isset($_SESSION['book_id'])) {
+    if ($connection) {
+        $user_id = $_SESSION['book_id'];
+        $sql = "SELECT book_username, book_user_roles, book_profile FROM BookUser WHERE book_id = ?";
+        if ($stmt = mysqli_prepare($connection, $sql)) {
+            mysqli_stmt_bind_param($stmt, "i", $user_id);
+            mysqli_stmt_execute($stmt);
+            $result = mysqli_stmt_get_result($stmt);
+            if ($user = mysqli_fetch_assoc($result)) {
+                $username = htmlspecialchars($user['book_username']);
+                $user_role = $user['book_user_roles'];
+                
+                if (!empty($user['book_profile'])) { 
+                    $profilePictureUrl = htmlspecialchars($user['book_profile']);
+                }
+                $_SESSION['book_user_roles'] = $user_role;
+            }
+            mysqli_stmt_close($stmt);
+        }
+    }
+}
 
 $search_from = trim($_GET['from_location'] ?? '');
 $search_to = trim($_GET['to_location'] ?? '');
@@ -108,8 +133,7 @@ mysqli_close($connection);
             text-decoration: underline;
         }
 
-        .top-gradient-bar .profile-picture-nav,
-        .top-gradient-bar .profile-icon-nav {
+        .top-gradient-bar .profile-picture-nav {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -117,9 +141,6 @@ mysqli_close($connection);
             vertical-align: middle;
             object-fit: cover;
             border: 1px solid white;
-        }
-        .top-gradient-bar .profile-icon-nav {
-            border: none;
         }
 
         .top-gradient-bar .btn-danger {
@@ -515,14 +536,12 @@ mysqli_close($connection);
             </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
+                    <span>Welcome, <?php echo $username; ?>!</span>
+
                     <a href="profile_page.php">
-                        <span>Welcome, <?php echo $username; ?>!</span>
-                        <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
-                            <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                        <?php else: ?>
-                            <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                        <?php endif; ?>
+                        <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
                     </a>
+
                     <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php else: ?>
                     <a href="login_page.php" class="nav-link">Login/Sign Up</a>

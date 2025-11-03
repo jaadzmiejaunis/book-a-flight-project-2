@@ -237,7 +237,7 @@ mysqli_close($connection);
             white-space: nowrap;
         }
 
-        .top-gradient-bar .profile-picture-nav, .top-gradient-bar .profile-icon-nav {
+        .top-gradient-bar .profile-picture-nav {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -602,11 +602,7 @@ mysqli_close($connection);
                 <?php if ($loggedIn): ?>
                     <span>Welcome, <?php echo $username; ?>!</span>
                     <a href="profile_page.php">
-                        <?php if (empty($profilePictureUrl) || strpos($profilePictureUrl, 'default') !== false): ?>
-                            <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                        <?php else: ?>
-                            <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                        <?php endif; ?>
+                        <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
                     </a>
                     <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php endif; ?>

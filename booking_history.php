@@ -9,12 +9,12 @@ if (!isset($_SESSION['book_id'])) {
 
 // Retrieve user data from the session for display in the navbar
 $loggedIn = isset($_SESSION['book_id']);
-$username = $loggedIn && isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Guest';
+$username = 'Guest';
+$user_role = 'Guest'; 
 
 // Default profile picture path
 $defaultProfilePicture = '/college_project/book-a-flight-project-2/image_website/default_profile.png';
-
-$profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) ? htmlspecialchars($_SESSION['profile_picture_url']) : $defaultProfilePicture;
+$profilePictureUrl = $defaultProfilePicture; // Set default
 
 // Get the logged-in user's ID from the session
 $user_id = $_SESSION['book_id'];
@@ -26,7 +26,27 @@ if (!$connection) {
     error_log("Database connection failed on booking history page: " . mysqli_connect_error());
     die("An error occurred connecting to the database to fetch booking history.");
 }
-// --- End Database Connection ---
+// --- Fetch User Data for Navbar ---
+if ($loggedIn) { 
+    // $user_id is already set from line 19
+    $sql_user = "SELECT book_username, book_user_roles, book_profile FROM BookUser WHERE book_id = ?";
+    if ($stmt_user = mysqli_prepare($connection, $sql_user)) {
+        mysqli_stmt_bind_param($stmt_user, "i", $user_id);
+        mysqli_stmt_execute($stmt_user);
+        $result_user = mysqli_stmt_get_result($stmt_user);
+        if ($user = mysqli_fetch_assoc($result_user)) {
+            $username = htmlspecialchars($user['book_username']);
+            $user_role = $user['book_user_roles'];
+            
+            if (!empty($user['book_profile'])) { 
+                $profilePictureUrl = htmlspecialchars($user['book_profile']);
+            }
+            $_SESSION['book_user_roles'] = $user_role; // Keep session updated
+        }
+        mysqli_stmt_close($stmt_user);
+    }
+}
+// --- End Fetch User Data ---
 
 // --- Fetch Booking History for the Logged-in User ---
 $booking_history = []; // Initialize an empty array to store booking history
@@ -173,8 +193,7 @@ mysqli_close($connection);
               text-decoration: underline;
          }
 
-        .top-gradient-bar .profile-picture-nav,
-        .top-gradient-bar .profile-icon-nav {
+        .top-gradient-bar .profile-picture-nav {
             width: 36px;
             height: 36px;
             border-radius: 50%;
@@ -183,9 +202,6 @@ mysqli_close($connection);
             object-fit: cover;
              border: 1px solid white;
         }
-         .top-gradient-bar .profile-icon-nav {
-              border: none;
-         }
 
          .top-gradient-bar .btn-danger {
              background-color: #dc3545;
@@ -356,14 +372,12 @@ mysqli_close($connection);
             </a>
             <div class="user-info">
                 <?php if ($loggedIn): ?>
+                     <span>Welcome, <?php echo $username; ?>!</span>
+
                      <a href="profile_page.php">
-                         <span>Welcome, <?php echo $username; ?>!</span>
-                         <?php if ($profilePictureUrl === $defaultProfilePicture || empty($profilePictureUrl)): ?>
-                              <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                         <?php else: ?>
-                              <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
-                         <?php endif; ?>
+                        <img src="<?php echo $profilePictureUrl; ?>" alt="Profile Picture" class="profile-picture-nav">
                      </a>
+
                      <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php else: ?>
                     <a href="login_page.php" class="nav-link">Login/Sign Up</a>

@@ -182,8 +182,7 @@ if (empty($navbarProfilePictureUrl)) {
               margin-right: 8px; /* Added margin */
           }
 
-         .top-gradient-bar .profile-picture-nav,
-         .top-gradient-bar .profile-icon-nav {
+         .top-gradient-bar .profile-picture-nav {
              width: 36px;
              height: 36px;
              border-radius: 50%;
@@ -192,11 +191,6 @@ if (empty($navbarProfilePictureUrl)) {
              object-fit: cover;
               border: 1px solid white;
          }
-          .top-gradient-bar .profile-icon-nav {
-               border: none;
-               font-size: 36px; /* Added font-size */
-               color: white; /* Added color */
-          }
 
           .top-gradient-bar .btn-danger {
               background-color: #dc3545;
@@ -445,14 +439,12 @@ if (empty($navbarProfilePictureUrl)) {
             </a>
             <div class="user-info">
                 <?php if (isset($_SESSION['book_id'])): ?>
+                     <span>Welcome, <?php echo $username; ?>!</span>
+
                      <a href="profile_page.php">
-                         <span>Welcome, <?php echo $username; ?>!</span>
-                         <?php if ($navbarProfilePictureUrl === $defaultProfilePicture || empty($navbarProfilePictureUrl)): ?>
-                              <i class="fas fa-user-circle fa-lg profile-icon-nav"></i>
-                         <?php else: ?>
-                              <img src="<?php echo htmlspecialchars($navbarProfilePictureUrl); ?>" alt="Profile Picture" class="profile-picture-nav">
-                         <?php endif; ?>
+                        <img src="<?php echo htmlspecialchars($navbarProfilePictureUrl); ?>" alt="Profile Picture" class="profile-picture-nav">
                      </a>
+
                      <a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>
                 <?php else: ?>
                     <a href="login_page.php" class="nav-link">Login/Sign Up</a>
