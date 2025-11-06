@@ -316,7 +316,6 @@ function get_html_footer($loggedIn, $user_role) {
         $role_specific_column = "<div class='col-lg-3 col-md-6 mb-4'><h6>{$panel_name}</h6><ul class='list-unstyled'>{$panel_links}</ul></div>";
     } else {
         $sierraflight_links .= '<li><a href="book_a_flight.php">Book a Flight</a></li>';
-        $role_specific_column = '<div class="col-lg-3 col-md-6 mb-4"><h6>Support</h6><ul class="list-unstyled"><li><a href="contact.php">Help Center</a></li></ul></div>';
     }
     return <<<HTML
     <footer class="site-footer">
