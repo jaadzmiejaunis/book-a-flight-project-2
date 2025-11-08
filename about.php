@@ -345,7 +345,10 @@ if ($user_role === 'Admin') {
                         </li>
                     <?php else: // Guest ?>
                         <li class="nav-item">
-                            <a class="nav-link" href="book_a_flight.php">Book a Flight</a>
+                            <a class="nav-link" href="contact.php">Contact Us</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="login_page.php">Book a Flight</a>
                         </li>
                     <?php endif; ?>
                 </ul>

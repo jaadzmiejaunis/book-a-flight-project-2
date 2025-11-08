@@ -318,7 +318,7 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
                         <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php elseif ($user_role === 'Staff'): ?>
                         <li class="nav-item"><a class="nav-link" href="staff_sales_report.php">Sales Report</a></li>
-                        <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">Booking Status</a></li>
+                        <li class="nav-item"><a class="nav-link" href="staff_booking_status.php">View Booking Status</a></li>
                         <li class="nav-item"><a class="nav-link" href="staff_user_feedback.php">User Feedback</a></li>
                         <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php elseif ($user_role === 'Customer'): ?>
@@ -326,7 +326,7 @@ if ($loggedIn && isset($_SESSION['book_id'])) {
                         <li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>
                         <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>
                     <?php else: // Guest ?>
-                        <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
+                        <li class="nav-item"><a class="nav-link" href="login_page.php">Book a Flight</a></li>
                     <?php endif; ?>
                 </ul>
             </div>

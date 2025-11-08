@@ -274,7 +274,8 @@ $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) && !em
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item"><a class="nav-link" href="homepage.php">Home</a></li>
                     <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
-                    <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
+                    <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
+                    <li class="nav-item"><a class="nav-link" href="login_page.php">Book a Flight</a></li>
                 </ul>
             </div>
         </div>
@@ -311,7 +312,6 @@ $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) && !em
         </div>
     </div>
     
-    <!-- Using a minimal footer for login page -->
     <footer class="site-footer" style="background-color: #212529; color: #a0a0a0; padding: 2rem 0; border-top: none; margin-top: auto;">
         <div class="container text-center">
             <p style="margin-bottom: 0.5rem; font-size: 0.9rem;">&copy; <?php echo date("Y"); ?> SierraFlight. All rights reserved.</p>
@@ -329,4 +329,3 @@ $profilePictureUrl = $loggedIn && isset($_SESSION['profile_picture_url']) && !em
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
 </body>
 </html>
-
