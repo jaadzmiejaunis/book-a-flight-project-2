@@ -171,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_status_id'])) 
         
         if (mysqli_stmt_execute($delete_stmt)) {
             // Also delete from related tables
-            $tables_to_clean = ['BookFlightPlace', 'BookFlightPassenger', 'BookFlightPrice', 'BookHistory'];
+            $tables_to_clean = ['BookFlightPlace', 'BookFlightPassenger', 'BookFlightPrice'];
             foreach ($tables_to_clean as $table) {
                 $clean_sql = "DELETE FROM $table WHERE book_id = ? AND user_id = ?";
                 $clean_stmt = mysqli_prepare($connection, $clean_sql);
