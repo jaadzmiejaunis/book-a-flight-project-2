@@ -315,8 +315,9 @@ function get_html_footer($loggedIn, $user_role) {
         }
         $role_specific_column = "<div class='col-lg-3 col-md-6 mb-4'><h6>{$panel_name}</h6><ul class='list-unstyled'>{$panel_links}</ul></div>";
     } else {
-        $sierraflight_links .= '<li><a href="book_a_flight.php">Book a Flight</a></li>';
-        $role_specific_column = '<div class="col-lg-3 col-md-6 mb-4"><h6>Support</h6><ul class="list-unstyled"><li><a href="contact.php">Help Center</a></li></ul></div>';
+        // If they are logged in, they can book directly. If not (Guest), they go to login.
+        $book_link = $loggedIn ? 'book_a_flight.php' : 'login_page.php';
+        $sierraflight_links .= '<li><a href="' . $book_link . '">Book a Flight</a></li>';
     }
     return <<<HTML
     <footer class="site-footer">
@@ -426,6 +427,7 @@ HTML;
         $user_actions_html = $loggedIn ?
             '<span>Welcome, ' . $username . '!</span><a href="profile_page.php"><img src="' . $profilePictureUrl . '" alt="Profile Picture" class="profile-picture-nav"></a><a class="btn btn-danger ml-2" href="log_out_page.php">Logout</a>'
             : '<a href="login_page.php" class="nav-link">Login/Sign Up</a>';
+        
         echo <<<HTML
         <div class="top-gradient-bar">
             <div class="container">
@@ -434,19 +436,21 @@ HTML;
             </div>
         </div>
         <nav class="navbar navbar-expand-lg navbar-dark"><div class="container"><button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button><div class="collapse navbar-collapse" id="navbarNav"><ul class="navbar-nav mr-auto">
-            <li class="nav-item active"><a class="nav-link" href="index.php">Home <span class="sr-only">(current)</span></a></li>
+            <li class="nav-item active"><a class="nav-link" href="homepage.php">Home <span class="sr-only">(current)</span></a></li>
             <li class="nav-item"><a class="nav-link" href="about.php">About</a></li>
             <li class="nav-item"><a class="nav-link" href="contact.php">Contact Us</a></li>
-            <li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
 HTML;
+        // Updated conditional navigation for "Book a Flight"
         if ($loggedIn) {
-            echo '<li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>
-                    <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
+            echo '<li class="nav-item"><a class="nav-link" href="book_a_flight.php">Book a Flight</a></li>
+                  <li class="nav-item"><a class="nav-link" href="booking_history.php">Book History</a></li>
+                  <li class="nav-item"><a class="nav-link" href="profile_page.php">Profile</a></li>';
+        } else {
+            // For guests, redirect to login page
+             echo '<li class="nav-item"><a class="nav-link" href="login_page.php">Book a Flight</a></li>';
         }
         echo '</ul></div></div></nav>';
         
-        // --- MODIFICATION: Replaced Jumbotron with Welcome Banner ---
-        // You will need to add an image at this path: 'image_website/website_image/sierraflight_customer_page.png'
         $welcome_image_html = '<img src="image_website/website_image/sierraflight_customer_page.png" alt="Plane window view">';
         $welcome_title = $loggedIn ? "Welcome, {$username}!" : "Welcome to SierraFlight!";
         $welcome_subtitle = $loggedIn ? "Find and book your next flight with ease." : "Sign in or register to manage your bookings.";
@@ -463,10 +467,8 @@ HTML;
             </div>
             <div class="col-lg-6 p-0 image-content">{$welcome_image_html}</div>
         </div></div></main>
-        HTML;
-        // --- END MODIFICATION ---
+HTML;
 
-        // Display the review carousel only if there are reviews
         if (!empty($five_star_reviews)) {
             echo '<div class="review-carousel-section">
                     <div class="container">
