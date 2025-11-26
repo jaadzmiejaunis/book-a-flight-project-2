@@ -1,5 +1,6 @@
 # ✈️ Book-A-Flight Project Setup Guide
 
+GitHub link: https://github.com/jaadzmiejaunis/book-a-flight-project-2
 This guide provides step-by-step instructions for setting up and running the **Book-A-Flight Project 2** locally using **XAMPP**.
 
 ---
